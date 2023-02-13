@@ -23,16 +23,10 @@
 #ifndef SINCRESAMPLER_H
 #define SINCRESAMPLER_H
 
-#ifdef __LIBRETRO__
-#include "../../../sysincludes.h"
-#endif
 #include "Resampler.h"
 
-#ifdef __LIBRETRO__
-#else
 #include <string>
 #include <map>
-#endif
 
 #include "../array.h"
 

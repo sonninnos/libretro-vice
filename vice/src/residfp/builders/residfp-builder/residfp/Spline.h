@@ -22,12 +22,8 @@
 #ifndef SPLINE_H
 #define SPLINE_H
 
-#ifdef __LIBRETRO__
-#include "../../../sysincludes.h"
-#else
 #include <cstddef>
 #include <vector>
-#endif
 
 namespace reSIDfp
 {
@@ -69,7 +65,7 @@ private:
     mutable ParamVector::const_pointer c;
 
 public:
-    Spline(const Point input[], size_t inputLength);
+    Spline(const std::vector<Point> &input);
 
     /**
      * Evaluate y and its derivative at given point x.

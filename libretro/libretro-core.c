@@ -197,7 +197,8 @@ static bool opt_reu_allow = true;
 #if defined(__XSCPU64__)
 unsigned int opt_supercpu_kernal = 0;
 #endif
-static unsigned int sound_volume_counter = 5;
+#define SOUND_VOLUME_COUNTER 10
+static unsigned int sound_volume_counter = SOUND_VOLUME_COUNTER;
 bool sound_drive_mute = false;
 unsigned int opt_audio_leak_volume = 0;
 int opt_datasette_sound_volume = 0;
@@ -444,7 +445,7 @@ static void toggle_tde(int on)
 void sound_volume_counter_reset(void)
 {
    resources_set_int("SoundVolume", 0);
-   sound_volume_counter = 5;
+   sound_volume_counter = SOUND_VOLUME_COUNTER;
 }
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)

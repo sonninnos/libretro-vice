@@ -20,9 +20,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "FilterModelConfig8580.h"
+#include "FilterModelConfig6581.h"
 
-#include "Integrator8580.h"
+#include "Integrator6581.h"
 #include "OpAmp.h"
 
 #include "sidcxx11.h"
@@ -30,122 +30,110 @@
 #ifdef HAVE_CXX11
 #  include <mutex>
 #endif
- 
+#include <cmath>
+
 namespace reSIDfp
 {
 
-/*
- * R1 = 15.3*Ri
- * R2 =  7.3*Ri
- * R3 =  4.7*Ri
- * Rf =  1.4*Ri
- * R4 =  1.4*Ri
- * R8 =  2.0*Ri
- * RC =  2.8*Ri
+#ifndef HAVE_CXX11
+/**
+ * Compute log(1+x) without losing precision for small values of x
  *
- * res  feedback  input
- * ---  --------  -----
- *  0   Rf        Ri
- *  1   Rf|R1     Ri
- *  2   Rf|R2     Ri
- *  3   Rf|R3     Ri
- *  4   Rf        R4
- *  5   Rf|R1     R4
- *  6   Rf|R2     R4
- *  7   Rf|R3     R4
- *  8   Rf        R8
- *  9   Rf|R1     R8
- *  A   Rf|R2     R8
- *  B   Rf|R3     R8
- *  C   Rf        RC
- *  D   Rf|R1     RC
- *  E   Rf|R2     RC
- *  F   Rf|R3     RC
+ * @note when compiling with -ffastm-math the compiler will
+ * optimize the expression away leaving a plain log(1. + x)
  */
-const double resGain[16] =
+inline double log1p(double x)
 {
-                        1.4/1.0, //      Rf/Ri   1.4
-    ((1.4*15.3)/(1.4+15.3))/1.0, // (Rf|R1)/Ri   1.28263
-      ((1.4*7.3)/(1.4+7.3))/1.0, // (Rf|R2)/Ri   1.17471
-      ((1.4*4.7)/(1.4+4.7))/1.0, // (Rf|R3)/Ri   1.07869
-                        1.4/1.4, //      Rf/R4   1
-    ((1.4*15.3)/(1.4+15.3))/1.4, // (Rf|R1)/R4   0.916168
-      ((1.4*7.3)/(1.4+7.3))/1.4, // (Rf|R2)/R4   0.83908
-      ((1.4*4.7)/(1.4+4.7))/1.4, // (Rf|R3)/R4   0.770492
-                        1.4/2.0, //      Rf/R8   0.7
-    ((1.4*15.3)/(1.4+15.3))/2.0, // (Rf|R1)/R8   0.641317
-      ((1.4*7.3)/(1.4+7.3))/2.0, // (Rf|R2)/R8   0.587356
-      ((1.4*4.7)/(1.4+4.7))/2.0, // (Rf|R3)/R8   0.539344
-                        1.4/2.8, //      Rf/RC   0.5
-    ((1.4*15.3)/(1.4+15.3))/2.8, // (Rf|R1)/RC   0.458084
-      ((1.4*7.3)/(1.4+7.3))/2.8, // (Rf|R2)/RC   0.41954
-      ((1.4*4.7)/(1.4+4.7))/2.8, // (Rf|R3)/RC   0.385246
-};
+    return log(1. + x) - (((1. + x) - 1.) - x) / (1. + x);
+}
+#endif
 
-const unsigned int OPAMP_SIZE = 21;
+const unsigned int OPAMP_SIZE = 33;
 
 /**
- * This is the SID 8580 op-amp voltage transfer function, measured on
- * CAP1B/CAP1A on a chip marked CSG 8580R5 1690 25.
+ * This is the SID 6581 op-amp voltage transfer function, measured on
+ * CAP1B/CAP1A on a chip marked MOS 6581R4AR 0687 14.
+ * All measured chips have op-amps with output voltages (and thus input
+ * voltages) within the range of 0.81V - 10.31V.
  */
 const Spline::Point opamp_voltage[OPAMP_SIZE] =
 {
-    {  1.30,  8.91 },  // Approximate start of actual range
-    {  4.76,  8.91 },
-    {  4.77,  8.90 },
-    {  4.78,  8.88 },
-    {  4.785, 8.86 },
-    {  4.79,  8.80 },
-    {  4.795, 8.60 },
-    {  4.80,  8.25 },
-    {  4.805, 7.50 },
-    {  4.81,  6.10 },
-    {  4.815, 4.05 },  // Change of curvature
-    {  4.82,  2.27 },
-    {  4.825, 1.65 },
-    {  4.83,  1.55 },
-    {  4.84,  1.47 },
-    {  4.85,  1.43 },
-    {  4.87,  1.37 },
-    {  4.90,  1.34 },
-    {  5.00,  1.30 },
-    {  5.10,  1.30 },
-    {  8.91,  1.30 },  // Approximate end of actual range
+  {  0.81, 10.31 },  // Approximate start of actual range
+  {  2.40, 10.31 },
+  {  2.60, 10.30 },
+  {  2.70, 10.29 },
+  {  2.80, 10.26 },
+  {  2.90, 10.17 },
+  {  3.00, 10.04 },
+  {  3.10,  9.83 },
+  {  3.20,  9.58 },
+  {  3.30,  9.32 },
+  {  3.50,  8.69 },
+  {  3.70,  8.00 },
+  {  4.00,  6.89 },
+  {  4.40,  5.21 },
+  {  4.54,  4.54 },  // Working point (vi = vo)
+  {  4.60,  4.19 },
+  {  4.80,  3.00 },
+  {  4.90,  2.30 },  // Change of curvature
+  {  4.95,  2.03 },
+  {  5.00,  1.88 },
+  {  5.05,  1.77 },
+  {  5.10,  1.69 },
+  {  5.20,  1.58 },
+  {  5.40,  1.44 },
+  {  5.60,  1.33 },
+  {  5.80,  1.26 },
+  {  6.00,  1.21 },
+  {  6.40,  1.12 },
+  {  7.00,  1.02 },
+  {  7.50,  0.97 },
+  {  8.50,  0.89 },
+  { 10.00,  0.81 },
+  { 10.31,  0.81 },  // Approximate end of actual range
 };
 
-std::unique_ptr<FilterModelConfig8580> FilterModelConfig8580::instance(nullptr);
+std::unique_ptr<FilterModelConfig6581> FilterModelConfig6581::instance(nullptr);
 
 #ifdef HAVE_CXX11
-std::mutex Instance8580_Lock;
+std::mutex Instance6581_Lock;
 #endif
 
-FilterModelConfig8580* FilterModelConfig8580::getInstance()
+FilterModelConfig6581* FilterModelConfig6581::getInstance()
 {
 #ifdef HAVE_CXX11
-    std::lock_guard<std::mutex> lock(Instance8580_Lock);
+    std::lock_guard<std::mutex> lock(Instance6581_Lock);
 #endif
 
     if (!instance.get())
     {
-        instance.reset(new FilterModelConfig8580());
+        instance.reset(new FilterModelConfig6581());
     }
 
     return instance.get();
 }
 
-FilterModelConfig8580::FilterModelConfig8580() :
+FilterModelConfig6581::FilterModelConfig6581() :
     FilterModelConfig(
-        0.24,   // voice voltage range FIXME measure
-        4.84,   // voice DC voltage FIXME measure
-        22e-9,  // capacitor value
-        9.09,   // Vdd
-        0.80,   // Vth
-        100e-6, // uCox
+        1.5,     // voice voltage range
+        5.075,   // voice DC voltage
+        470e-12, // capacitor value
+        12.18,   // Vdd
+        1.31,    // Vth
+        20e-6,   // uCox
         opamp_voltage,
         OPAMP_SIZE
-    )
+    ),
+    WL_vcr(9.0 / 1.0),
+    WL_snake(1.0 / 115.0),
+    dac_zero(6.65),
+    dac_scale(2.63),
+    dac(DAC_BITS)
 {
+    dac.kinkedDac(MOS6581);
+
     // Create lookup tables for gains / summers.
+
 #ifndef _OPENMP
     OpAmp opampModel(
         std::vector<Spline::Point>(
@@ -203,7 +191,7 @@ FilterModelConfig8580::FilterModelConfig8580() :
                 vmin,
                 vmax);
 #endif
-            // The audio mixer operates at n ~ 8/5, and has 8 fundamentally different
+            // The audio mixer operates at n ~ 8/6, and has 8 fundamentally different
             // input configurations (0 - 7 input "resistors").
             //
             // All "on", transistors are modeled as one - see comments above for
@@ -212,7 +200,7 @@ FilterModelConfig8580::FilterModelConfig8580() :
             {
                 const int idiv = (i == 0) ? 1 : i;
                 const int size = (i == 0) ? 1 : i << 16;
-                const double n = i * 8.0 / 5.0;
+                const double n = i * 8.0 / 6.0;
                 opampModel.reset();
                 mixer[i] = new unsigned short[size];
 
@@ -238,12 +226,12 @@ FilterModelConfig8580::FilterModelConfig8580() :
             // 4 bit "resistor" ladders in the audio output gain
             // necessitate 16 gain tables.
             // From die photographs of the volume "resistor" ladders
-            // it follows that gain ~ vol/16 (assuming ideal
+            // it follows that gain ~ vol/12 (assuming ideal
             // op-amps and ideal "resistors").
             for (int n8 = 0; n8 < 16; n8++)
             {
                 const int size = 1 << 16;
-                const double n = n8 / 16.0;
+                const double n = n8 / 12.0;
                 opampModel.reset();
                 gain_vol[n8] = new unsigned short[size];
 
@@ -269,27 +257,86 @@ FilterModelConfig8580::FilterModelConfig8580() :
             // 4 bit "resistor" ladders in the bandpass resonance gain
             // necessitate 16 gain tables.
             // From die photographs of the bandpass "resistor" ladders
-            // it follows that 1/Q ~ 2^((4 - res)/8) (assuming ideal
+            // it follows that 1/Q ~ ~res/8 (assuming ideal
             // op-amps and ideal "resistors").
             for (int n8 = 0; n8 < 16; n8++)
             {
                 const int size = 1 << 16;
+                const double n = (~n8 & 0xf) / 8.0;
                 opampModel.reset();
                 gain_res[n8] = new unsigned short[size];
 
                 for (int vi = 0; vi < size; vi++)
                 {
                     const double vin = vmin + vi / N16; /* vmin .. vmax */
-                    gain_res[n8][vi] = getNormalizedValue(opampModel.solve(resGain[n8], vin));
+                    gain_res[n8][vi] = getNormalizedValue(opampModel.solve(n, vin));
                 }
+            }
+        }
+
+        #pragma omp section
+        {
+            const double nVddt = N16 * (Vddt - vmin);
+
+            for (unsigned int i = 0; i < (1 << 16); i++)
+            {
+                // The table index is right-shifted 16 times in order to fit in
+                // 16 bits; the argument to sqrt is thus multiplied by (1 << 16).
+                const double tmp = nVddt - sqrt(static_cast<double>(i << 16));
+                assert(tmp > -0.5 && tmp < 65535.5);
+                vcr_nVg[i] = static_cast<unsigned short>(tmp + 0.5);
+            }
+        }
+
+        #pragma omp section
+        {
+            //  EKV model:
+            //
+            //  Ids = Is * (if - ir)
+            //  Is = (2 * u*Cox * Ut^2)/k * W/L
+            //  if = ln^2(1 + e^((k*(Vg - Vt) - Vs)/(2*Ut))
+            //  ir = ln^2(1 + e^((k*(Vg - Vt) - Vd)/(2*Ut))
+
+            // moderate inversion characteristic current
+            const double Is = (2. * uCox * Ut * Ut) * WL_vcr;
+
+            // Normalized current factor for 1 cycle at 1MHz.
+            const double N15 = norm * ((1 << 15) - 1);
+            const double n_Is = N15 * 1.0e-6 / C * Is;
+
+            // kVgt_Vx = k*(Vg - Vt) - Vx
+            // I.e. if k != 1.0, Vg must be scaled accordingly.
+            for (int i = 0; i < (1 << 16); i++)
+            {
+                const int kVgt_Vx = i - (1 << 15);
+                const double log_term = log1p(exp((kVgt_Vx / N16) / (2. * Ut)));
+                // Scaled by m*2^15
+                const double tmp = n_Is * log_term * log_term;
+                assert(tmp > -0.5 && tmp < 65535.5);
+                vcr_n_Ids_term[i] = static_cast<unsigned short>(tmp + 0.5);
             }
         }
     }
 }
 
-std::unique_ptr<Integrator8580> FilterModelConfig8580::buildIntegrator()
+unsigned short* FilterModelConfig6581::getDAC(double adjustment) const
 {
-    return MAKE_UNIQUE(Integrator8580, this);
+    const double dac_zero = getDacZero(adjustment);
+
+    unsigned short* f0_dac = new unsigned short[1 << DAC_BITS];
+
+    for (unsigned int i = 0; i < (1 << DAC_BITS); i++)
+    {
+        const double fcd = dac.getOutput(i);
+        f0_dac[i] = getNormalizedValue(dac_zero + fcd * dac_scale / (1 << DAC_BITS));
+    }
+
+    return f0_dac;
+}
+
+std::unique_ptr<Integrator6581> FilterModelConfig6581::buildIntegrator()
+{
+    return MAKE_UNIQUE(Integrator6581, this, WL_snake);
 }
 
 } // namespace reSIDfp
