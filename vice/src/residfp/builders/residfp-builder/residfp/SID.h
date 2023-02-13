@@ -23,11 +23,7 @@
 #ifndef SIDFP_H
 #define SIDFP_H
 
-#ifdef __LIBRETRO__
-#include "../../../sysincludes.h"
-#else
 #include <memory>
-#endif
 
 #include "siddefs-fp.h"
 
@@ -91,6 +87,9 @@ private:
     /// SID voices
     std::unique_ptr<Voice> voice[3];
 
+    /// Used to amplify the output by x/2 to get an adequate playback volume
+    int scaleFactor;
+
     /// Time to live for the last written value
     int busValueTtl;
 
@@ -108,6 +107,20 @@ private:
 
     /// Flags for muted channels
     bool muted[3];
+
+    /**
+     * Emulated nonlinearity of the envelope DAC.
+     *
+     * @See Dac
+     */
+    float envDAC[256];
+
+    /**
+     * Emulated nonlinearity of the oscillator DAC.
+     *
+     * @See Dac
+     */
+    float oscDAC[4096];
 
 private:
     /**
@@ -236,7 +249,11 @@ public:
      * @param buf audio output buffer
      * @return number of samples produced
      */
+#ifdef __LIBRETRO__
     int clock(unsigned int cycles, short* buf, int n, int interleave);
+#else
+    int clock(unsigned int cycles, short* buf);
+#endif
 
     /**
      * Clock SID forward with no audio production.
@@ -276,9 +293,7 @@ public:
 
 #if RESID_INLINING || defined(SID_CPP)
 
-#ifndef __LIBRETRO__
 #include <algorithm>
-#endif
 
 #include "Filter.h"
 #include "ExternalFilter.h"
@@ -310,17 +325,27 @@ int SID::output() const
     const int v2 = voice[1]->output(voice[0]->wave());
     const int v3 = voice[2]->output(voice[1]->wave());
 
-    return externalFilter->clock(filter->clock(v1, v2, v3));
+    const int input = (scaleFactor * static_cast<unsigned int>(filter->clock(v1, v2, v3))) / 2;
+
+    return externalFilter->clock(input);
 }
 
 
 RESID_INLINE
+#ifdef __LIBRETRO__
 int SID::clock(unsigned int cycles, short* buf, int n, int interleave)
+#else
+int SID::clock(unsigned int cycles, short* buf)
+#endif
 {
     ageBusValue(cycles);
     int s = 0;
 
+#ifdef __LIBRETRO__
     while (cycles > 0 && cycles < 100)
+#else
+    while (cycles != 0)
+#endif
     {
         unsigned int delta_t = std::min(nextVoiceSync, cycles);
 
@@ -340,8 +365,12 @@ int SID::clock(unsigned int cycles, short* buf, int n, int interleave)
 
                 if (unlikely(resampler->input(output())))
                 {
+#ifdef __LIBRETRO__
                     buf[s*interleave] = resampler->getOutput();
                     s++;
+#else
+                    buf[s++] = resampler->getOutput();
+#endif
                 }
             }
 
