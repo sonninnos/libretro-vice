@@ -22,16 +22,9 @@
 #ifndef TWOPASSSINCRESAMPLER_H
 #define TWOPASSSINCRESAMPLER_H
 
-#ifdef __LIBRETRO__
-#include "../../../sysincludes.h"
-#ifdef __PS3__
-#include "PS3_include.h"
-#endif
-#else
 #include <cmath>
 
 #include <memory>
-#endif
 
 #include "Resampler.h"
 #include "SincResampler.h"
