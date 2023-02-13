@@ -60,6 +60,8 @@ void Dac::kinkedDac(ChipModel chipModel)
     // 6581 DACs are not terminated by a 2R resistor
     const bool term = chipModel == MOS8580;
 
+    double Vsum = 0.;
+
     // Calculate voltage contribution by each individual bit in the R-2R ladder.
     for (unsigned int set_bit = 0; set_bit < dacLength; set_bit++)
     {
@@ -76,7 +78,7 @@ void Dac::kinkedDac(ChipModel chipModel)
         {
             Rn = (Rn == R_INFINITY) ?
                  R + _2R :
-                 R + _2R * Rn / (_2R + Rn); // R + 2R || Rn
+                 R + (_2R * Rn) / (_2R + Rn); // R + 2R || Rn
         }
 
         // Source transformation for bit voltage.
@@ -86,7 +88,7 @@ void Dac::kinkedDac(ChipModel chipModel)
         }
         else
         {
-            Rn = _2R * Rn / (_2R + Rn); // 2R || Rn
+            Rn = (_2R * Rn) / (_2R + Rn); // 2R || Rn
             Vn = Vn * Rn / _2R;
         }
 
@@ -97,21 +99,15 @@ void Dac::kinkedDac(ChipModel chipModel)
         {
             Rn += R;
             const double I = Vn / Rn;
-            Rn = _2R * Rn / (_2R + Rn); // 2R || Rn
+            Rn = (_2R * Rn) / (_2R + Rn); // 2R || Rn
             Vn = Rn * I;
         }
 
         dac[set_bit] = Vn;
+        Vsum += Vn;
     }
 
     // Normalize to integerish behavior
-    double Vsum = 0.;
-
-    for (unsigned int i = 0; i < dacLength; i++)
-    {
-        Vsum += dac[i];
-    }
-
     Vsum /= 1 << dacLength;
 
     for (unsigned int i = 0; i < dacLength; i++)
