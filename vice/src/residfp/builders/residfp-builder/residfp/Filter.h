@@ -23,10 +23,6 @@
 #ifndef FILTER_H
 #define FILTER_H
 
-#ifdef __LIBRETRO__
-#include "../../../sidcxx11.h"
-#endif
-
 namespace reSIDfp
 {
 

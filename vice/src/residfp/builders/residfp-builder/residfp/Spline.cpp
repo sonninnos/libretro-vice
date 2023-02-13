@@ -21,22 +21,19 @@
 
 #include "Spline.h"
 
-#ifdef __LIBRETRO__
-#else
 #include <cassert>
 #include <limits>
-#endif
 
 namespace reSIDfp
 {
 
-Spline::Spline(const Point input[], size_t inputLength) :
-    params(inputLength),
+Spline::Spline(const std::vector<Point> &input) :
+    params(input.size()),
     c(&params[0])
 {
-    assert(inputLength > 2);
+    assert(input.size() > 2);
 
-    const size_t coeffLength = inputLength - 1;
+    const size_t coeffLength = input.size() - 1;
 
     std::vector<double> dxs(coeffLength);
     std::vector<double> ms(coeffLength);
