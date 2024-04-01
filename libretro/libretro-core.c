@@ -1865,6 +1865,10 @@ bool retro_disk_set_eject_state(bool ejected);
 
 void reload_restart(void)
 {
+   /* Disable warp */
+   if (vsync_get_warp_mode())
+      vsync_set_warp_mode(0);
+
    /* Clear request */
    request_reload_restart = false;
 
@@ -1873,10 +1877,6 @@ void reload_restart(void)
 
    /* Reset Datasette */
    datasette_control(TAPEPORT_PORT_1, DATASETTE_CONTROL_RESET);
-
-   /* Disable warp */
-   if (vsync_get_warp_mode())
-      vsync_set_warp_mode(0);
 
    /* Reset autoloadwarp audio ignore */
    audio_is_ignored = false;
@@ -7664,22 +7664,22 @@ static void update_variables(void)
 
 void emu_reset(int type)
 {
+   /* Changing opt_read_vicerc requires reloading */
+   if (request_reload_restart)
+      reload_restart();
+
+   /* Disable Warp */
+   if (vsync_get_warp_mode())
+      vsync_set_warp_mode(0);
+
    /* Reset Datasette or autostart from tape will fail */
    datasette_control(TAPEPORT_PORT_1, DATASETTE_CONTROL_RESET);
 
    /* Release keyboard keys */
    keyboard_clear_keymatrix();
 
-   /* Disable Warp */
-   if (vsync_get_warp_mode())
-      vsync_set_warp_mode(0);
-
    /* Reset autoloadwarp audio ignore */
    audio_is_ignored = false;
-
-   /* Changing opt_read_vicerc requires reloading */
-   if (request_reload_restart)
-      reload_restart();
 
    /* Follow core option type with -1 */
    type = (type == -1) ? opt_reset_type : type;
