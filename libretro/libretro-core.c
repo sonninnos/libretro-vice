@@ -8696,6 +8696,18 @@ void retro_run(void)
    if (led_state_cb)
       retro_led_interface();
 
+   /* Force frontend fast-forward on when internal warp is on */
+   {
+      static int warp_mode_prev = 0;
+      int warp_mode             = vsync_get_warp_mode();
+
+      if (warp_mode != warp_mode_prev)
+      {
+         warp_mode_prev = warp_mode;
+         retro_fastforwarding(warp_mode);
+      }
+   }
+
    /* Virtual keyboard */
    /* Moved to retrodep video_canvas_refresh() in order to stop flashing during warping */
 

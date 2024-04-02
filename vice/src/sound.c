@@ -1552,7 +1552,6 @@ void sound_set_warp_mode(int value)
     warp_mode_enabled = value;
 
 #ifdef __LIBRETRO__
-    retro_fastforwarding(value);
     if (opt_warp_boost && vice_opt.SidEngine != SID_ENGINE_FASTSID)
     {
         resources_set_int("SidEngine", (value) ? SID_ENGINE_FASTSID : vice_opt.SidEngine);
