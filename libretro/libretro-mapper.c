@@ -1485,11 +1485,11 @@ void retro_poll_event()
       for (retro_j = 0; retro_j < retro_j_max; retro_j++)
       {
          /* Analog sticks depending on core options */
-         if (!retro_mouse_x[retro_j] && !retro_mouse_y[retro_j]
-               && ((opt_analogmouse == 1 || opt_analogmouse == 3) ||
-                   !mapper_keys[RETRO_DEVICE_ID_JOYPAD_LR] && !mapper_keys[RETRO_DEVICE_ID_JOYPAD_LL] &&
-                   !mapper_keys[RETRO_DEVICE_ID_JOYPAD_LD] && !mapper_keys[RETRO_DEVICE_ID_JOYPAD_LU]
-                  )
+         if (  (opt_analogmouse == 1 || opt_analogmouse == 3)
+            || (  !mapper_keys[RETRO_DEVICE_ID_JOYPAD_LR]
+               && !mapper_keys[RETRO_DEVICE_ID_JOYPAD_LL]
+               && !mapper_keys[RETRO_DEVICE_ID_JOYPAD_LD]
+               && !mapper_keys[RETRO_DEVICE_ID_JOYPAD_LU])
             )
          {
             /* Left analog movement */
@@ -1507,15 +1507,15 @@ void retro_poll_event()
             if (mouse_speed[retro_j] & MOUSE_SPEED_SLOWER)
                mouse_multiplier = mouse_multiplier / MOUSE_SPEED_SLOW;
 
-            retro_mouse_x[retro_j] = process_analogmouse(analog_stick[0], analog_deadzone, analog_mag, opt_analogmouse_speed_left, mouse_multiplier, &(sub_pixel_remainder_leftstick_x[retro_j]));
-            retro_mouse_y[retro_j] = process_analogmouse(analog_stick[1], analog_deadzone, analog_mag, opt_analogmouse_speed_left, mouse_multiplier, &(sub_pixel_remainder_leftstick_y[retro_j]));
+            retro_mouse_x[retro_j] += process_analogmouse(analog_stick[0], analog_deadzone, analog_mag, opt_analogmouse_speed_left, mouse_multiplier, &(sub_pixel_remainder_leftstick_x[retro_j]));
+            retro_mouse_y[retro_j] += process_analogmouse(analog_stick[1], analog_deadzone, analog_mag, opt_analogmouse_speed_left, mouse_multiplier, &(sub_pixel_remainder_leftstick_y[retro_j]));
          }
 
-         if (!retro_mouse_x[retro_j] && !retro_mouse_y[retro_j]
-               && ((opt_analogmouse == 2 || opt_analogmouse == 3) ||
-                   !mapper_keys[RETRO_DEVICE_ID_JOYPAD_RR] && !mapper_keys[RETRO_DEVICE_ID_JOYPAD_RL] &&
-                   !mapper_keys[RETRO_DEVICE_ID_JOYPAD_RD] && !mapper_keys[RETRO_DEVICE_ID_JOYPAD_RU]
-                  )
+         if (  (opt_analogmouse == 2 || opt_analogmouse == 3)
+            || (  !mapper_keys[RETRO_DEVICE_ID_JOYPAD_RR]
+               && !mapper_keys[RETRO_DEVICE_ID_JOYPAD_RL]
+               && !mapper_keys[RETRO_DEVICE_ID_JOYPAD_RD]
+               && !mapper_keys[RETRO_DEVICE_ID_JOYPAD_RU])
             )
          {
             /* Right analog movement */
@@ -1533,8 +1533,8 @@ void retro_poll_event()
             if (mouse_speed[retro_j] & MOUSE_SPEED_SLOWER)
                mouse_multiplier = mouse_multiplier / MOUSE_SPEED_SLOW;
 
-            retro_mouse_x[retro_j] = process_analogmouse(analog_stick[0], analog_deadzone, analog_mag, opt_analogmouse_speed_right, mouse_multiplier, &(sub_pixel_remainder_rightstick_x[retro_j]));
-            retro_mouse_y[retro_j] = process_analogmouse(analog_stick[1], analog_deadzone, analog_mag, opt_analogmouse_speed_right, mouse_multiplier, &(sub_pixel_remainder_rightstick_y[retro_j]));
+            retro_mouse_x[retro_j] += process_analogmouse(analog_stick[0], analog_deadzone, analog_mag, opt_analogmouse_speed_right, mouse_multiplier, &(sub_pixel_remainder_rightstick_x[retro_j]));
+            retro_mouse_y[retro_j] += process_analogmouse(analog_stick[1], analog_deadzone, analog_mag, opt_analogmouse_speed_right, mouse_multiplier, &(sub_pixel_remainder_rightstick_y[retro_j]));
          }
       }
 
