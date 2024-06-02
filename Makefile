@@ -4,6 +4,7 @@ SOURCES_C   :=
 SOURCES_CC  :=
 SOURCES_CXX :=
 OBJECTS     :=
+SILENT      := 0
 
 ifeq ($(platform),)
 platform = unix
@@ -414,14 +415,14 @@ endif
 COMMONFLAGS += -DCORE_NAME=\"$(EMUTYPE)\"
 include Makefile.common
 
-$(info CFLAGS: $(CFLAGS) $(COMMONFLAGS))
-$(info -------)
-
 OBJECTS     += $(patsubst %.cpp,%.o,$(SOURCES_CXX:.cc=.o)) $(SOURCES_C:.c=.o)
-OBJECT_DEPS  = $(OBJECTS:.o=.d)
+PLATFLAGS   := $(CFLAGS)
 CXXFLAGS    += $(fpic) $(INCFLAGS) $(COMMONFLAGS)
 CFLAGS      += $(fpic) $(INCFLAGS) $(COMMONFLAGS)
 LDFLAGS     += -lm $(fpic)
+
+OBJDIR      := build
+OBJECTS     := $(addprefix $(OBJDIR)/,$(OBJECTS))
 
 # Ensure only a language version supported by all compilers is used
 # Do not enforce C99 as some gcc-versions appear to not handle system-headers
@@ -436,11 +437,19 @@ ifeq ($(platform), theos_ios)
 	${LIBRARY_NAME}_FILES = $(SOURCES_CXX) $(SOURCES_C)
 	include $(THEOS_MAKE_PATH)/library.mk
 else
+
+default: info all
+
+info:
+	$(info CFLAGS: $(PLATFLAGS) $(COMMONFLAGS))
+	$(info -------)
+
 all: $(TARGET)
+
+-include $(OBJECTS:.o=.d))
+
 $(TARGET): $(OBJECTS)
-ifeq ($(platform), emscripten)
-	$(CXX) -r $(SHARED) -o $@ $(OBJECTS) $(LDFLAGS)
-else  ifeq ($(STATIC_LINKING), 1)
+ifeq ($(STATIC_LINKING), 1)
 	$(AR) rcs $@ $(OBJECTS)
 #STATIC_LINKING=1 and additional Makefile.common sources are incompatible for PS3 environment
 else ifeq ($(platform), ps3)
@@ -449,25 +458,36 @@ else
 	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS)
 endif
 
-%.o: %.c
+$(OBJDIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	@if [ $(SILENT) -ne 1 ]; then\
+		$(if $@, $(shell echo echo CC $<),);\
+	fi
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-%.o: %.cpp
+$(OBJDIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	@if [ $(SILENT) -ne 1 ]; then\
+		$(if $@, $(shell echo echo CXX $<),);\
+	fi
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-%.o: %.cc
+$(OBJDIR)/%.o: %.cc
+	@mkdir -p $(dir $@)
+	@if [ $(SILENT) -ne 1 ]; then\
+		$(if $@, $(shell echo echo CXX $<),);\
+	fi
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
-
--include $(OBJECT_DEPS)
 
 clean:
-	rm -f $(OBJECTS) $(OBJECT_DEPS) $(TARGET)
+	rm -rf $(OBJDIR)
+	rm -f $(TARGET)
 
 objectclean:
-	rm -f $(OBJECTS) $(OBJECT_DEPS)
+	rm -rf $(OBJDIR)
 
 targetclean:
 	rm -f $(TARGET)
 
-.PHONY: clean
+.PHONY: all clean objectclean targetclean
 endif

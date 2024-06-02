@@ -114,6 +114,16 @@ extern unsigned short int pix_bytes;
       { NULL, NULL }, \
    }
 
+#define ANALOG_STICK_SPEED_OPTIONS \
+   { \
+      { "0.1", "10%" }, { "0.2", "20%" }, { "0.3", "30%" }, { "0.4", "40%" }, { "0.5", "50%" },  \
+      { "0.6", "60%" }, { "0.7", "70%" }, { "0.8", "80%" }, { "0.9", "90%" }, { "1.0", "100%" }, \
+      { "1.1", "110%" },{ "1.2", "120%" },{ "1.3", "130%" },{ "1.4", "140%" },{ "1.5", "150%" }, \
+      { "1.6", "160%" },{ "1.7", "170%" },{ "1.8", "180%" },{ "1.9", "190%" },{ "2.0", "200%" }, \
+      { "2.1", "210%" },{ "2.2", "220%" },{ "2.3", "230%" },{ "2.4", "240%" },{ "2.5", "250%" }, \
+      { "2.6", "260%" },{ "2.7", "270%" },{ "2.8", "280%" },{ "2.9", "290%" },{ "3.0", "300%" }, \
+      { NULL, NULL }, \
+   }
 
 /* Statusbar */
 #define STATUSBAR_BOTTOM   0x01
@@ -145,10 +155,15 @@ extern unsigned int cur_port;
 extern unsigned int retro_region;
 extern int request_model_set;
 
+extern int tape_enabled;
+extern int tape_counter;
+extern int tape_control;
+extern int tape_motor;
+
 extern unsigned int retro_warpmode;
-extern bool audio_playing(void);
-extern unsigned int crop_id;
+extern int crop_id;
 extern int crop_id_prev;
+extern bool crop_delay;
 
 #define CROP_NONE            0
 #define CROP_SMALL           1
@@ -182,15 +197,28 @@ extern int crop_id_prev;
 #endif
 #elif defined(__XVIC__)
 /* PAL: 448x284, NTSC: 400x234, VIC: 352x184 */
+#include "victypes.h"
+#include "vic-timing.h"
 #define CROP_WIDTH_MAX   352
 #define CROP_HEIGHT_MAX  184
-#define CROP_TOP_BORDER  48
-#define CROP_LEFT_BORDER 48
-#else /*#elif defined(__XPLUS4__)*/
+#define CROP_TOP_BORDER_PAL  VIC_PAL_NO_BORDER_FIRST_DISPLAYED_LINE  - vic.first_displayed_line
+#define CROP_TOP_BORDER_NTSC VIC_NTSC_NO_BORDER_FIRST_DISPLAYED_LINE - vic.first_displayed_line
+#define CROP_TOP_BORDER  CROP_TOP_BORDER_PAL
+#define CROP_LEFT_BORDER vic.screen_leftborderwidth
+#elif defined(__XPLUS4__)
 /* PAL: 384x288, NTSC: 384x242, TED: 320x200 */
+#include "tedtypes.h"
+#include "ted-timing.h"
 #define CROP_WIDTH_MAX   320
 #define CROP_HEIGHT_MAX  200
-#define CROP_TOP_BORDER  40
+#define CROP_TOP_BORDER_PAL  TED_PAL_NO_BORDER_FIRST_DISPLAYED_LINE  - ted.first_displayed_line
+#define CROP_TOP_BORDER_NTSC TED_NTSC_NO_BORDER_FIRST_DISPLAYED_LINE - ted.first_displayed_line
+#define CROP_TOP_BORDER  CROP_TOP_BORDER_PAL
+#define CROP_LEFT_BORDER ted.screen_leftborderwidth
+#else /* CRTC */
+#define CROP_WIDTH_MAX   320
+#define CROP_HEIGHT_MAX  200
+#define CROP_TOP_BORDER  33
 #define CROP_LEFT_BORDER 32
 #endif
 
@@ -226,6 +254,7 @@ extern void reload_restart(void);
 extern void emu_reset(int type);
 extern int RGBc(int r, int g, int b);
 extern void display_retro_message(const char *message);
+extern void statusbar_message_show(signed char icon, const char *format, ...);
 extern void set_variable(const char *key, const char *value);
 extern char* get_variable(const char *key);
 
@@ -259,6 +288,7 @@ struct vice_core_options
    int AutostartWarp;
    int AttachDevice8Readonly;
    int EasyFlashWriteCRT;
+   int Printer;
    int VirtualDevices;
    int DriveTrueEmulation;
    int DriveSoundEmulation;

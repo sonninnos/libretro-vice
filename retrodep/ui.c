@@ -61,6 +61,11 @@ BYTE c64memrom_kernal64_rom_original[C64_KERNAL_ROM_SIZE] = {0};
 extern unsigned int opt_jiffydos_kernal_skip;
 #endif
 
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__X128__) || defined(__XVIC__)
+extern int request_model_auto_set;
+extern bool opt_model_auto;
+#endif
+
 #include "libretro-core.h"
 #if defined(__XVIC__)
 extern void vic20mem_set(void);
@@ -74,6 +79,7 @@ extern unsigned int opt_jiffydos;
 extern unsigned int opt_autoloadwarp;
 extern char full_path[RETRO_PATH_MAX];
 extern char retro_system_data_directory[RETRO_PATH_MAX];
+extern bool log_resource_set;
 extern retro_log_printf_t log_cb;
 
 static const cmdline_option_t cmdline_options[] = {
@@ -283,15 +289,15 @@ int ui_init_finalize(void)
 #elif defined(__XCBM2__) || defined(__XCBM5x0__)
    cbm2model_set(vice_opt.Model);
 #elif defined(__XVIC__)
-   vic20model_set(vice_opt.Model);
+   vic20model_set(opt_model_auto && request_model_auto_set > -1 ? request_model_auto_set : vice_opt.Model);
 #elif defined(__XPLUS4__)
    plus4model_set(vice_opt.Model);
 #elif defined(__X128__)
-   c128model_set(vice_opt.Model);
+   c128model_set(opt_model_auto && request_model_auto_set > -1 ? request_model_auto_set : vice_opt.Model);
 #elif defined(__X64DTV__)
    dtvmodel_set(vice_opt.Model);
 #else
-   c64model_set(vice_opt.Model);
+   c64model_set(opt_model_auto && request_model_auto_set > -1 ? request_model_auto_set : vice_opt.Model);
 #endif
 
 #if defined(__X64__) || defined(__X64SC__)
@@ -325,9 +331,9 @@ int ui_init_finalize(void)
    log_resources_set_int("SoundFragmentSize", SOUND_FRAGMENT_SMALL);
    log_resources_set_int("AutostartPrgMode", 1);
    log_resources_set_int("AutostartDelayRandom", 0);
+   log_resources_set_int("AutostartHandleTrueDriveEmulation", 0);
    log_resources_set_int("FSDeviceLongNames", 1);
    log_resources_set_int("Mouse", 1);
-   log_resources_set_int("Printer4", 1);
 
    /* Machine specific defaults */
 #if defined(__X64DTV__)
@@ -441,10 +447,10 @@ int ui_init_finalize(void)
    /* Media */
    log_resources_set_int("AutostartWarp", vice_opt.AutostartWarp);
    log_resources_set_int("VirtualDevice4", vice_opt.VirtualDevices);
-   log_resources_set_int("Drive8TrueEmulation", vice_opt.DriveTrueEmulation);
-   log_resources_set_int("Drive9TrueEmulation", vice_opt.DriveTrueEmulation);
    log_resources_set_int("VirtualDevice8", !vice_opt.DriveTrueEmulation);
    log_resources_set_int("VirtualDevice9", !vice_opt.DriveTrueEmulation);
+   log_resources_set_int("Drive8TrueEmulation", vice_opt.DriveTrueEmulation);
+   log_resources_set_int("Drive9TrueEmulation", vice_opt.DriveTrueEmulation);
    log_resources_set_int("AttachDevice8d0Readonly", vice_opt.AttachDevice8Readonly);
    log_resources_set_int("AttachDevice8d1Readonly", vice_opt.AttachDevice8Readonly);
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
@@ -558,7 +564,11 @@ int ui_init_finalize(void)
       log_resources_set_string("CartridgeFile", vice_opt.CartridgeFile);
 #endif
 
+   /* Printer */
+   log_resources_set_int("Printer4", vice_opt.Printer);
+
    retro_ui_finalized = true;
+   log_resource_set = true;
    return 0;
 }
 

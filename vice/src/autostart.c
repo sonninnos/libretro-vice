@@ -87,9 +87,10 @@
 #include "keyboard.h"
 #include "libretro.h"
 #include "libretro-glue.h"
+#include "libretro-mapper.h"
+extern int tape_counter;
+extern unsigned int retro_warpmode;
 extern unsigned int opt_autostart;
-extern unsigned int opt_work_disk_type;
-extern unsigned int opt_work_disk_unit;
 #endif
 
 #ifdef DEBUG_AUTOSTART
@@ -749,7 +750,12 @@ static void restore_drive_emulation_state(int unit, int drive)
     }
     if (orig_warp_mode != -1) {
         /* set warp to original state */
+#ifdef __LIBRETRO__
+        /* Not if holding warp manually */
+        if (vsync_get_warp_mode() != orig_warp_mode && !retro_warpmode) {
+#else
         if (vsync_get_warp_mode() != orig_warp_mode) {
+#endif
             set_warp_mode(orig_warp_mode);
         }
     }
@@ -1043,8 +1049,8 @@ static void advance_loadingtape(void)
         case YES:
 #ifdef __LIBRETRO__
             /* Kludge required for T64s */
-            if (opt_autostart)
-               keyboard_key_released(RETROK_LCTRL, 0);
+            if (opt_autostart && retro_key_state_internal[RETROK_LCTRL])
+               retro_key_up(RETROK_LCTRL);
 #endif
             disable_warp_if_was_requested();
             autostart_finish();
@@ -1058,16 +1064,16 @@ static void advance_loadingtape(void)
             /* leave autostart and disable warp if ROM area was left */
             check_rom_area();
 #ifdef __LIBRETRO__
-            if (!opt_autostart)
+            if (!opt_autostart || !tape_counter)
                 break;
-            switch (check2("FOUND ", AUTOSTART_NOWAIT_BLINK, 0 ,0)) {
+            if (retro_key_state_internal[RETROK_LCTRL] && tape_counter > 5 && tape_counter < 1000)
+                retro_key_up(RETROK_LCTRL);
+            switch (check2("FOUND ", AUTOSTART_NOWAIT_BLINK, 0 , 0)) {
                 case YES:
-                    keyboard_key_pressed(RETROK_LCTRL, 0);
+                    if (!retro_key_state_internal[RETROK_LCTRL])
+                        retro_key_down(RETROK_LCTRL);
                     break;
-                case NO:
-                    keyboard_key_released(RETROK_LCTRL, 0);
-                    break;
-                case NOT_YET:
+                default:
                     break;
             }
 #endif

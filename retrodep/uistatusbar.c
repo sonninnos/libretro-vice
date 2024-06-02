@@ -41,6 +41,7 @@
 #include "vsyncapi.h"
 #include "joystick.h"
 #include "archdep.h"
+#include "drive.h"
 #include "keyboard.h"
 #include "keymap.h"
 
@@ -66,12 +67,12 @@ extern int vic20mem_forced;
 /* static functions/variables */
 
 #define STATUSBAR_JOY_POS           0
-#define STATUSBAR_TAPE_POS          55
+#define STATUSBAR_TAPE_POS          53
 #define STATUSBAR_DRIVE_POS         59
 #define STATUSBAR_DRIVE8_TRACK_POS  59
-#define STATUSBAR_DRIVE9_TRACK_POS  59
-#define STATUSBAR_DRIVE10_TRACK_POS 59
-#define STATUSBAR_DRIVE11_TRACK_POS 59
+#define STATUSBAR_DRIVE9_TRACK_POS  57
+#define STATUSBAR_DRIVE10_TRACK_POS 55
+#define STATUSBAR_DRIVE11_TRACK_POS 53
 #define STATUSBAR_PAUSE_POS         61
 #define STATUSBAR_SPEED_POS         61
 #define MAX_STATUSBAR_LEN           64
@@ -132,9 +133,68 @@ static void display_speed(void)
 }
 
 unsigned int statusbar_message_timer = 0;
-static int drive_enabled = 0;
-static int drive_empty = 0;
-static int drive_pwm = 0;
+static int drive_enabled[NUM_DISK_UNITS] = {0};
+static int drive_empty[NUM_DISK_UNITS] = {0};
+static int drive_pwm[NUM_DISK_UNITS] = {0};
+
+static void clear_drive_statusbar_chars(signed char unit)
+{
+    unsigned char i;
+    unsigned char i_max = (unit < 0) ? NUM_DISK_UNITS : unit + 1;
+
+    if (unit > -1)
+        i = unit;
+
+    for (i = i; i < i_max; i++)
+    {
+        if (drive_enabled[i] && drive_empty[i])
+        {
+            switch (i)
+            {
+                case 1:
+                    statusbar_chars[STATUSBAR_DRIVE9_TRACK_POS] = '#';
+                    statusbar_chars[STATUSBAR_DRIVE9_TRACK_POS + 1] = '9';
+                    break;
+                case 2:
+                    statusbar_chars[STATUSBAR_DRIVE10_TRACK_POS] = '#';
+                    statusbar_chars[STATUSBAR_DRIVE10_TRACK_POS + 1] = '0';
+                    break;
+                case 3:
+                    statusbar_chars[STATUSBAR_DRIVE11_TRACK_POS] = '#';
+                    statusbar_chars[STATUSBAR_DRIVE11_TRACK_POS + 1] = '1';
+                    break;
+                default:
+                case 0:
+                    statusbar_chars[STATUSBAR_DRIVE8_TRACK_POS] = '#';
+                    statusbar_chars[STATUSBAR_DRIVE8_TRACK_POS + 1] = '8';
+                    break;
+            }
+        }
+        else if (drive_enabled[i] && !drive_empty[i])
+        {
+            switch (i)
+            {
+                case 1:
+                    statusbar_chars[STATUSBAR_DRIVE9_TRACK_POS] = '0';
+                    statusbar_chars[STATUSBAR_DRIVE9_TRACK_POS + 1] = '0';
+                    break;
+                case 2:
+                    statusbar_chars[STATUSBAR_DRIVE10_TRACK_POS] = '0';
+                    statusbar_chars[STATUSBAR_DRIVE10_TRACK_POS + 1] = '0';
+                    break;
+                case 3:
+                    statusbar_chars[STATUSBAR_DRIVE11_TRACK_POS] = '0';
+                    statusbar_chars[STATUSBAR_DRIVE11_TRACK_POS + 1] = '0';
+                    break;
+                default:
+                case 0:
+                    statusbar_chars[STATUSBAR_DRIVE8_TRACK_POS] = '0';
+                    statusbar_chars[STATUSBAR_DRIVE8_TRACK_POS + 1] = '0';
+                    break;
+            }
+        }
+    }
+}
 
 void display_current_image(const char *image, bool inserted)
 {
@@ -144,13 +204,11 @@ void display_current_image(const char *image, bool inserted)
 
     if (strcmp(image, ""))
     {
-        drive_empty = (inserted) ? 0 : 1;
         snprintf(imagename, sizeof(imagename), "%.100s", image);
         snprintf(imagename_prev, sizeof(imagename_prev), "%.100s", imagename);
     }
     else
     {
-        drive_empty = 1;
         if (strcmp(imagename_prev, ""))
             snprintf(imagename, sizeof(imagename), "%.100s", imagename_prev);
     }
@@ -174,18 +232,9 @@ void display_current_image(const char *image, bool inserted)
     }
 
     if (dc_get_image_type(dc->files[dc->index]) != DC_IMAGE_TYPE_FLOPPY)
-       drive_empty = true;
+        drive_empty[0] = true;
 
-    if (drive_empty)
-    {
-        statusbar_chars[STATUSBAR_DRIVE8_TRACK_POS] = ' ';
-        statusbar_chars[STATUSBAR_DRIVE8_TRACK_POS + 1] = ' ';
-    }
-    else if (drive_enabled)
-    {
-        statusbar_chars[STATUSBAR_DRIVE8_TRACK_POS] = '0';
-        statusbar_chars[STATUSBAR_DRIVE8_TRACK_POS + 1] = '0';
-    }
+    clear_drive_statusbar_chars(0);
 }
 
 /* ----------------------------------------------------------------- */
@@ -248,16 +297,19 @@ void ui_enable_drive_status(ui_drive_enable_t state, int *drive_led_color)
 {
     int drive_number;
     int drive_state = (int)state;
-    drive_enabled = drive_state;
 
     for (drive_number = 0; drive_number < 4; ++drive_number) {
+        drive_enabled[drive_number] = state & (1 << drive_number);
         if (drive_state & 1) {
             ui_display_drive_led(drive_number, 0, 0, 0);
-        } else {
-            statusbar_chars[STATUSBAR_DRIVE_POS + drive_number] = ' ';
         }
         drive_state >>= 1;
     }
+
+#if !defined(__X64DTV__)
+    /* Never disable #8 */
+    drive_enabled[0] = 1;
+#endif
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
         uistatusbar_state |= UISTATUSBAR_REPAINT;
@@ -267,7 +319,7 @@ void ui_enable_drive_status(ui_drive_enable_t state, int *drive_led_color)
 void ui_display_drive_track(
       unsigned int drive_number, unsigned int drive_base, unsigned int half_track_number, unsigned int disk_side)
 {
-    if (drive_empty)
+    if (drive_empty[drive_number] || !drive_enabled[drive_number])
         return;
 
     unsigned int track_number = half_track_number / 2;
@@ -304,8 +356,8 @@ void ui_display_drive_track(
 /* The pwm value will vary between 0 and 1000.  */
 void ui_display_drive_led(unsigned int drive_number, unsigned int drive_base, unsigned int pwm1, unsigned int led_pwm2)
 {
-    drive_pwm = pwm1;
-    vice_led_state[RETRO_LED_DRIVE] = (drive_pwm > 1) ? 1 : 0;
+    drive_pwm[drive_number] = pwm1;
+    vice_led_state[RETRO_LED_DRIVE] = (drive_pwm[drive_number] > 1) ? 1 : 0;
     return;
 
     char c;
@@ -324,6 +376,13 @@ void ui_display_drive_led(unsigned int drive_number, unsigned int drive_base, un
 
 void ui_display_drive_current_image(unsigned int unit_number, unsigned int drive_number, const char *image)
 {
+    drive_empty[unit_number] = !image[0];
+
+    if (dc_get_image_type(image) != DC_IMAGE_TYPE_FLOPPY)
+        drive_empty[unit_number] = 1;
+
+    clear_drive_statusbar_chars(unit_number);
+
 #ifdef SDL_DEBUG
     fprintf(stderr, "%s\n", __func__);
 #endif
@@ -334,7 +393,7 @@ void ui_display_drive_current_image(unsigned int unit_number, unsigned int drive
 int tape_enabled = 0;
 int tape_control = 0;
 int tape_counter = 0;
-static int tape_motor = 0;
+int tape_motor = 0;
 
 static void display_tape(void)
 {
@@ -343,34 +402,15 @@ static void display_tape(void)
 
     if (tape_enabled)
         vice_led_state[RETRO_LED_TAPE] = (tape_control == 1 && tape_motor) ? 1 : 0;
-
-    if (tape_enabled && (opt_autoloadwarp & AUTOLOADWARP_TAPE || vsync_get_warp_mode()) && !retro_warpmode)
-    {
-        bool audio = !(opt_autoloadwarp & AUTOLOADWARP_MUTE) && opt_autoloadwarp & AUTOLOADWARP_TAPE ? audio_playing() : false;
-
-        if (tape_control == 1 && tape_motor == 2 && !audio && !vsync_get_warp_mode())
-        {
-            vsync_set_warp_mode(1);
-#if 0
-            printf("Tape Warp  ON, control:%d motor:%d audio:%d\n", tape_control, tape_motor, audio);
-#endif
-        }
-        else if ((tape_control != 1 || !tape_motor || audio) && vsync_get_warp_mode() || !(opt_autoloadwarp & AUTOLOADWARP_TAPE))
-        {
-            vsync_set_warp_mode(0);
-#if 0
-            printf("Tape Warp OFF, control:%d motor:%d audio:%d\n", tape_control, tape_motor, audio);
-#endif
-        }
-    }
+    else
+        tape_control = 0;
 
     if (tape_enabled)
         snprintf(tmpstr, sizeof(tmpstr), "%c%03d", tape_chars[tape_control], tape_counter);
-    else
-        snprintf(tmpstr, sizeof(tmpstr), "    ");
 
     /* Skip null terminator */
-    strncpy(&statusbar_chars[STATUSBAR_TAPE_POS], tmpstr, sizeof(tmpstr)-1);
+    if (tmpstr[0])
+        strncpy(&statusbar_chars[STATUSBAR_TAPE_POS], tmpstr, sizeof(tmpstr)-1);
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
         uistatusbar_state |= UISTATUSBAR_REPAINT;
@@ -579,7 +619,7 @@ static void display_joyport(void)
     if (opt_statusbar & STATUSBAR_BASIC)
         snprintf(tmpstr, sizeof(tmpstr), "%24s", "");
 
-    snprintf(&statusbar_chars[STATUSBAR_JOY_POS], sizeof(statusbar_chars), "%-54s", tmpstr);
+    snprintf(&statusbar_chars[STATUSBAR_JOY_POS], sizeof(statusbar_chars), "%-51s", tmpstr);
 
     if (opt_statusbar & STATUSBAR_BASIC)
         return;
@@ -621,26 +661,45 @@ static void display_joyport(void)
         case C64MODEL_ULTIMAX:
             strcpy(tmpstr, "  MAX"); break;
     }
+#elif defined(__X128__)
+    /* Model */
+    unsigned model = vice_opt.Model;
+    if (request_model_set > -1 && request_model_set != model)
+        model = request_model_set;
+
+    switch (model)
+    {
+        default:
+        case C128MODEL_C128_PAL:
+        case C128MODEL_C128_NTSC:
+            strcpy(tmpstr, " C128"); break;
+        case C128MODEL_C128D_PAL:
+        case C128MODEL_C128D_NTSC:
+            strcpy(tmpstr, "C128D"); break;
+        case C128MODEL_C128DCR_PAL:
+        case C128MODEL_C128DCR_NTSC:
+            strcpy(tmpstr, "CDCR"); break;
+    }
 #endif
 
     /* Memory */
-    unsigned memory = 0;
+    float memory_size = 0;
     const char *memory_unit = {0};
 #if defined(__XSCPU64__)
-    memory = vice_opt.SIMMSize * 1024;
+    memory_size = vice_opt.SIMMSize * 1024;
 #else
-    memory = vice_opt.REUsize;
+    memory_size = vice_opt.REUsize;
 #endif
 
-    if (memory > 512)
+    if (memory_size > 512)
     {
-        memory /= 1024;
-        memory_unit = "MB";
+        memory_size /= 1024;
+        memory_unit = "M";
     }
     else
-        memory_unit = "kB";
+        memory_unit = "K";
 
-    snprintf(statusbar_memory, sizeof(statusbar_memory), "%3d%s", memory, memory_unit);
+    snprintf(statusbar_memory, sizeof(statusbar_memory), (memory_size > 0 && memory_size < 10) ? "%3.1f%s" : "%3.0f%s", memory_size, memory_unit);
     snprintf(statusbar_model, sizeof(statusbar_model), "%-5s", tmpstr);
 #elif defined(__XVIC__)
     /* Model */
@@ -659,14 +718,14 @@ static void display_joyport(void)
 
     /* Memory */
     unsigned memory = 0;
-    const char *memory_unit = "kB";
+    const char *memory_unit = "K";
     memory = (vic20mem_forced > -1) ? vic20mem_forced : vice_opt.VIC20Memory;
     if (!memory && vice_opt.Model == VIC20MODEL_VIC21)
         memory = 3;
 
     int vic20mems[6] = {0, 3, 8, 16, 24, 35};
 
-    snprintf(statusbar_memory, sizeof(statusbar_memory), "%3d%s", vic20mems[memory], memory_unit);
+    snprintf(statusbar_memory, sizeof(statusbar_memory), "%2d%s", vic20mems[memory], memory_unit);
     snprintf(statusbar_model, sizeof(statusbar_model), "%-5s", tmpstr);
 #endif
 
@@ -700,6 +759,8 @@ void uistatusbar_close(void)
 #define COLOR_BROWN   RGBc(143, 140, 129)
 #define COLOR_BROWN_D RGBc( 89,  79,  78)
 
+#define LED_WIDTH(chars) ((char_width + (led_padding * char_scale_x)) * chars) + (led_padding * char_scale_x * 2)
+
 void uistatusbar_draw(void)
 {
     unsigned int i = 0;
@@ -727,43 +788,54 @@ void uistatusbar_draw(void)
     color_f      = color_white;
     color_b      = color_black;
 
-    if (retrow > 704)
+    if (retrow >= 704)
        char_scale_x = 2;
 
-    char_width *= char_scale_x;
-
-    /* Statusbar position */
-    x = 1;
-    if (opt_statusbar & STATUSBAR_TOP)
-        y = retroYS_crop_offset + 1;
-    else
-        y = retroh_crop + retroYS_crop_offset - 8;
-
-    /* Statusbar background */
-    int bkg_x = retroXS_offset + x - 1;
-    int bkg_y = y - 1;
-    int max_width = retrow_crop;
-    int bkg_width = max_width;
-    int bkg_height = 9;
-
-    /* Right alignment offset */
-    int x_align_offset = 3;
+    char_width  *= char_scale_x;
+    char_offset *= char_scale_x;
 
     /* LED section position */
-    int led_x     = 0;
-    int led_width = 0;
-    if (drive_enabled)
-    {
-        led_width = (char_width * 5) - x_align_offset + 2;
-        if (tape_enabled)
-            led_width += (char_width * 5) - x_align_offset;
-    }
-    else if (tape_enabled)
-        led_width = (char_width * 8) - x_align_offset - 3;
-    else
-        led_width = (char_width * 3) - x_align_offset;
+    int led_x       = 0;
+    int led_width   = 0;
+    int led_padding = 1;
 
-    led_x = retroXS_offset + x + max_width - led_width - 1;
+    /* Statusbar position */
+    x = 0;
+    if (opt_statusbar & STATUSBAR_TOP)
+        y = retroYS_crop_offset + led_padding + 1;
+    else
+        y = retroh_crop + retroYS_crop_offset - 8 - led_padding;
+
+    /* Statusbar background */
+    int bkg_x      = retroXS_offset;
+    int bkg_y      = y - (led_padding * 2);
+    int bkg_width  = retrow_crop;
+    int bkg_height = 9 + (led_padding * 2);
+
+    /* Right alignment offset */
+    int x_align_offset = char_scale_x > 1 ? (char_scale_x * 2) + (char_scale_x / 2) : char_scale_x * 2;
+
+    /* Power LED size */
+    led_width = LED_WIDTH(2) + char_scale_x;
+
+    /* Drive LED size */
+    if (drive_enabled[0])
+    {
+        unsigned char drive_i;
+
+        for (drive_i = 0; drive_i < NUM_DISK_UNITS; drive_i++)
+        {
+            if (drive_enabled[drive_i])
+                led_width += LED_WIDTH(2);
+        }
+    }
+
+    /* Tape LED size */
+    if (tape_enabled)
+        led_width += LED_WIDTH(4) - char_scale_x;
+
+    /* LED horizontal start */
+    led_x = retrow_crop - led_width + char_scale_x - 1;
 
     /* Basic mode statusbar background */
     if (opt_statusbar & STATUSBAR_BASIC && !statusbar_message_timer)
@@ -789,9 +861,24 @@ void uistatusbar_draw(void)
     }
     else if (!(opt_statusbar & STATUSBAR_BASIC))
     {
-        draw_text(bkg_x + (max_width / 2) - (20 * char_scale_x), y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, char_scale_x, 1, 10, statusbar_resolution);
-        draw_text(bkg_x + (max_width / 2) + (30 * char_scale_x), y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, char_scale_x, 1, 10, statusbar_memory);
-        draw_text(bkg_x + (max_width / 2) + (70 * char_scale_x), y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, char_scale_x, 1, 10, statusbar_model);
+        int8_t resolution_pos = -20;
+        uint8_t memory_pos    = 30;
+        uint8_t model_pos     = 60;
+        uint16_t max_pos      = bkg_x + (retrow_crop / 2) + (model_pos * char_scale_x);
+
+        /* Sacrifice memory slot if there is not enough width */
+        if (led_x < max_pos)
+        {
+            memory_pos = 0;
+            model_pos  = 34;
+        }
+
+        if (resolution_pos)
+            draw_text(bkg_x + (retrow_crop / 2) + (resolution_pos * char_scale_x), y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, char_scale_x, 1, 10, statusbar_resolution);
+        if (memory_pos)
+            draw_text(bkg_x + (retrow_crop / 2) + (memory_pos * char_scale_x), y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, char_scale_x, 1, 10, statusbar_memory);
+        if (model_pos)
+            draw_text(bkg_x + (retrow_crop / 2) + (model_pos * char_scale_x), y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, char_scale_x, 1, 10, statusbar_model);
     }
 
     /* Tape indicator + drive & power LEDs */
@@ -807,15 +894,14 @@ void uistatusbar_draw(void)
         if (!retro_statusbar && statusbar_message_timer && (opt_statusbar & STATUSBAR_MESSAGES))
             continue;
 
-        /* Default background */
+        /* Default colors */
+        color_f = color_white;
         color_b = color_black;
 
         /* Drive/tape LED color */
-        if (i >= STATUSBAR_TAPE_POS && i < STATUSBAR_SPEED_POS)
+        if (i >= STATUSBAR_TAPE_POS)
         {
-            color_f = color_black;
-
-            if (tape_enabled)
+            if (tape_enabled && i < STATUSBAR_TAPE_POS + 4)
             {
                 if (tape_motor)
                     color_b = color_brown;
@@ -825,14 +911,114 @@ void uistatusbar_draw(void)
         }
 
         /* Drive loading */
-        if ((i == STATUSBAR_DRIVE8_TRACK_POS || i == STATUSBAR_DRIVE8_TRACK_POS + 1) && drive_enabled)
+        if (   ((i == STATUSBAR_DRIVE8_TRACK_POS  || i == STATUSBAR_DRIVE8_TRACK_POS  + 1) && drive_enabled[0])
+            || ((i == STATUSBAR_DRIVE9_TRACK_POS  || i == STATUSBAR_DRIVE9_TRACK_POS  + 1) && drive_enabled[1])
+            || ((i == STATUSBAR_DRIVE10_TRACK_POS || i == STATUSBAR_DRIVE10_TRACK_POS + 1) && drive_enabled[2])
+            || ((i == STATUSBAR_DRIVE11_TRACK_POS || i == STATUSBAR_DRIVE11_TRACK_POS + 1) && drive_enabled[3])
+           )
         {
+            unsigned char unit = 0;
+
+            if (i == STATUSBAR_DRIVE9_TRACK_POS || i == STATUSBAR_DRIVE9_TRACK_POS + 1)
+                unit = 1;
+            else if (i == STATUSBAR_DRIVE10_TRACK_POS || i == STATUSBAR_DRIVE10_TRACK_POS + 1)
+                unit = 2;
+            else if (i == STATUSBAR_DRIVE11_TRACK_POS || i == STATUSBAR_DRIVE11_TRACK_POS + 1)
+                unit = 3;
+
             color_b = color_green;
 
-            if (drive_pwm > 1)
-                color_b = color_greenb;
-            else if (drive_empty)
+            /* Switch drives around left-to-right */
+            if (drive_enabled[3])
+            {
+                switch (unit)
+                {
+                    case 0:
+                        unit = 3;
+                        if (i == STATUSBAR_DRIVE8_TRACK_POS)
+                            c = statusbar_chars[STATUSBAR_DRIVE11_TRACK_POS];
+                        else if (i == STATUSBAR_DRIVE8_TRACK_POS + 1)
+                            c = statusbar_chars[STATUSBAR_DRIVE11_TRACK_POS + 1];
+                        break;
+                    case 1:
+                        unit = 2;
+                        if (i == STATUSBAR_DRIVE9_TRACK_POS)
+                            c = statusbar_chars[STATUSBAR_DRIVE10_TRACK_POS];
+                        else if (i == STATUSBAR_DRIVE9_TRACK_POS + 1)
+                            c = statusbar_chars[STATUSBAR_DRIVE10_TRACK_POS + 1];
+                        break;
+                    case 2:
+                        unit = 1;
+                        if (i == STATUSBAR_DRIVE10_TRACK_POS)
+                            c = statusbar_chars[STATUSBAR_DRIVE9_TRACK_POS];
+                        else if (i == STATUSBAR_DRIVE10_TRACK_POS + 1)
+                            c = statusbar_chars[STATUSBAR_DRIVE9_TRACK_POS + 1];
+                        break;
+                    case 3:
+                        unit = 0;
+                        if (i == STATUSBAR_DRIVE11_TRACK_POS)
+                            c = statusbar_chars[STATUSBAR_DRIVE8_TRACK_POS];
+                        else if (i == STATUSBAR_DRIVE11_TRACK_POS + 1)
+                            c = statusbar_chars[STATUSBAR_DRIVE8_TRACK_POS + 1];
+                        break;
+                }
+            }
+            else if (drive_enabled[2])
+            {
+                switch (unit)
+                {
+                    case 0:
+                        unit = 2;
+                        if (i == STATUSBAR_DRIVE8_TRACK_POS)
+                            c = statusbar_chars[STATUSBAR_DRIVE10_TRACK_POS];
+                        else if (i == STATUSBAR_DRIVE8_TRACK_POS + 1)
+                            c = statusbar_chars[STATUSBAR_DRIVE10_TRACK_POS + 1];
+                        break;
+                    case 1:
+                        unit = 1;
+                        if (i == STATUSBAR_DRIVE9_TRACK_POS)
+                            c = statusbar_chars[STATUSBAR_DRIVE9_TRACK_POS];
+                        else if (i == STATUSBAR_DRIVE9_TRACK_POS + 1)
+                            c = statusbar_chars[STATUSBAR_DRIVE9_TRACK_POS + 1];
+                        break;
+                    case 2:
+                        unit = 0;
+                        if (i == STATUSBAR_DRIVE10_TRACK_POS)
+                            c = statusbar_chars[STATUSBAR_DRIVE8_TRACK_POS];
+                        else if (i == STATUSBAR_DRIVE10_TRACK_POS + 1)
+                            c = statusbar_chars[STATUSBAR_DRIVE8_TRACK_POS + 1];
+                        break;
+                }
+            }
+            else if (drive_enabled[1])
+            {
+                switch (unit)
+                {
+                    case 0:
+                        unit = 1;
+                        if (i == STATUSBAR_DRIVE8_TRACK_POS)
+                            c = statusbar_chars[STATUSBAR_DRIVE9_TRACK_POS];
+                        else if (i == STATUSBAR_DRIVE8_TRACK_POS + 1)
+                            c = statusbar_chars[STATUSBAR_DRIVE9_TRACK_POS + 1];
+                        break;
+                    case 1:
+                        unit = 0;
+                        if (i == STATUSBAR_DRIVE9_TRACK_POS)
+                            c = statusbar_chars[STATUSBAR_DRIVE8_TRACK_POS];
+                        else if (i == STATUSBAR_DRIVE9_TRACK_POS + 1)
+                            c = statusbar_chars[STATUSBAR_DRIVE8_TRACK_POS + 1];
+                        break;
+                }
+            }
+
+            if (drive_empty[unit])
+            {
+                color_f = color_green;
                 color_b = color_greend;
+            }
+
+            if (drive_pwm[unit] > 1)
+                color_b = color_greenb;
 
             if (opt_statusbar & STATUSBAR_MINIMAL)
                 c = ' ';
@@ -840,51 +1026,122 @@ void uistatusbar_draw(void)
         /* Power LED color */
         else if (i == STATUSBAR_SPEED_POS || i == STATUSBAR_SPEED_POS + 1)
         {
-            color_f = color_black;
             color_b = color_red;
 
             if (opt_statusbar & STATUSBAR_MINIMAL)
                 c = ' ';
         }
 
+        /* Character background mode */
+        int graph_bg = (i >= STATUSBAR_TAPE_POS) ? GRAPH_BG_OUTLINE : (c & 0x80) ? GRAPH_BG_ALL : GRAPH_BG_NONE;
+
         /* Right alignment for tape/drive/power */
         int x_align = retroXS_offset;
-#ifdef __XVIC__
+#if defined(__XVIC__)
         /* VIC-20 crop horizontal centering shenanigans */
         if (i >= STATUSBAR_TAPE_POS && retroXS_offset && retro_region != RETRO_REGION_PAL)
-            x_align -= 8;
+            x_align -= retroXS_crop_offset;
 #endif
         if (i >= STATUSBAR_TAPE_POS)
             x_align += x_align_offset + retrow_crop - (MAX_STATUSBAR_LEN * char_width);
 
-        if (drive_enabled)
+        if (drive_enabled[0])
         {
             if (i == STATUSBAR_DRIVE8_TRACK_POS || i == STATUSBAR_DRIVE8_TRACK_POS + 1)
-                x_align -= 2 * char_scale_x;
+                x_align -= 4 * char_scale_x;
 
-            if (tape_enabled)
+            if (drive_enabled[1])
             {
+                if (i == STATUSBAR_DRIVE9_TRACK_POS || i == STATUSBAR_DRIVE9_TRACK_POS + 1)
+                    x_align -= 8 * char_scale_x;
+            }
+
+            /* Drives 10 & 11 only shown if tape is not in use */
+            if (!tape_enabled)
+            {
+                if (drive_enabled[2])
+                {
+                    if (i == STATUSBAR_DRIVE10_TRACK_POS || i == STATUSBAR_DRIVE10_TRACK_POS + 1)
+                        x_align -= 12 * char_scale_x;
+                }
+                if (drive_enabled[3])
+                {
+                    if (i == STATUSBAR_DRIVE11_TRACK_POS || i == STATUSBAR_DRIVE11_TRACK_POS + 1)
+                        x_align -= 16 * char_scale_x;
+                }
+            }
+            else if (tape_enabled)
+            {
+                signed char x_extra = char_width;
+
+                if (drive_enabled[1])
+                    x_extra += char_width * 2;
+                else
+                    x_extra -= (char_width - 1) * 2;
+
                 if (i == STATUSBAR_TAPE_POS)
-                    x_align -= ((char_width + 5) * char_scale_x) - char_width;
+                    x_align -= ((char_width + x_extra + 1) * char_scale_x) - char_width;
                 else if (i >= STATUSBAR_TAPE_POS && i < STATUSBAR_TAPE_POS + 4)
-                    x_align -= ((char_width + 4) * char_scale_x) - char_width;
+                    x_align -= ((char_width + x_extra) * char_scale_x) - char_width;
             }
         }
-        else if (tape_enabled)
+        else
+        if (tape_enabled)
         {
             if (i == STATUSBAR_TAPE_POS)
-                x_align -= (3 * char_scale_x) - (char_width * 2);
-            else if (i >= STATUSBAR_TAPE_POS && i < STATUSBAR_TAPE_POS + 4)
-                x_align -= (2 * char_scale_x) - (char_width * 2);
-
-            if (i == STATUSBAR_DRIVE8_TRACK_POS || i == STATUSBAR_DRIVE8_TRACK_POS + 1)
-                c = '\0';
+                x_align -= (3 * char_scale_x) - (char_width * 4);
+            else if (i > STATUSBAR_TAPE_POS && i < STATUSBAR_TAPE_POS + 4)
+                x_align -= (2 * char_scale_x) - (char_width * 4);
         }
 
         int x_char = x + char_offset + x_align + (i * char_width);
 
         /* Output */
         snprintf(s, sizeof(s), "%c", c);
-        draw_text(x_char - char_scale_x, y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, char_scale_x, 1, 10, s);
+
+        /* LED color background boxes */
+        if (i >= STATUSBAR_TAPE_POS)
+        {
+            /* 11 10 09 08 sp */
+            /* >tape 09 08 sp */
+            int8_t box_start = 0;
+            int8_t box_end   = 0;
+
+            switch (i)
+            {
+                case STATUSBAR_SPEED_POS:
+                case STATUSBAR_DRIVE8_TRACK_POS:
+                case STATUSBAR_DRIVE9_TRACK_POS:
+                case STATUSBAR_DRIVE10_TRACK_POS:
+                case STATUSBAR_DRIVE11_TRACK_POS:
+                    box_start = char_scale_x;
+                    break;
+
+                case STATUSBAR_SPEED_POS + 1:
+                case STATUSBAR_DRIVE8_TRACK_POS + 1:
+                case STATUSBAR_DRIVE9_TRACK_POS + 1:
+                case STATUSBAR_DRIVE10_TRACK_POS + 1:
+                case STATUSBAR_DRIVE11_TRACK_POS + 1:
+                    box_start = -char_scale_x;
+                    box_end   = char_scale_x;
+                    break;
+            }
+
+            if (tape_enabled)
+            {
+                if (i > STATUSBAR_TAPE_POS && i < STATUSBAR_TAPE_POS + 3)
+                {
+                    if (i > STATUSBAR_TAPE_POS + 1)
+                        box_start = -char_scale_x;
+                    else
+                        box_start = 0;
+                    box_end = 0;
+                }
+            }
+
+            draw_fbox(x_char - box_start, y - 1, char_width + char_scale_x + box_start + box_end, char_width / char_scale_x + 3, color_b, GRAPH_ALPHA_100);
+        }
+
+        draw_text(x_char, y, color_f, color_black + 1, GRAPH_ALPHA_100, graph_bg, char_scale_x, 1, 10, s);
     }
 }
