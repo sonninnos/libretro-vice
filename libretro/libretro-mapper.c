@@ -227,6 +227,8 @@ void emu_function(int function)
          cur_port_locked = true;
          /* Statusbar notification */
          statusbar_message_show(9, "%s %d", "Port", cur_port);
+         /* Clear mapper flags to prevent possible sticky keys */
+         memset(mapper_flag, 0, sizeof(mapper_flag));
          break;
       case EMU_RESET:
          /* Cart freeze requires a cart */
