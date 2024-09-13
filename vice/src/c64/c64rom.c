@@ -79,6 +79,7 @@ static struct kernal_s kernal_match[] = {
     { 0,                    0,                          NULL,                   C64_KERNAL_UNKNOWN }
 };
 
+#ifndef __LIBRETRO__
 int c64rom_get_kernal_chksum_id(uint16_t *sumout, int *idout, char *hash)
 {
     int i;
@@ -131,6 +132,7 @@ int c64rom_get_kernal_chksum_id(uint16_t *sumout, int *idout, char *hash)
     LOG(("c64rom_get_kernal_chksum_id: C64_KERNAL_NONE"));
     return C64_KERNAL_UNKNOWN; /* unknown */
 }
+#endif
 
 /* FIXME: this function has a misleading name, only called from snapshot stuff atm
           it was used to patch the kernal before, but not anymore
@@ -142,6 +144,9 @@ int c64rom_print_kernal_info(void)
     int rev;                    /* detected revision */
     char hash[41];
 
+#ifdef __LIBRETRO__
+    return C64_KERNAL_UNKNOWN;
+#else
     rev = c64rom_get_kernal_chksum_id(&sum, &id, hash);
     if (rev == C64_KERNAL_UNKNOWN) {
         log_warning(c64rom_log, "Unknown Kernal image.  ID: %d ($%02X) Sum: %d ($%04X) SHA1: %s.",
@@ -156,6 +161,7 @@ int c64rom_print_kernal_info(void)
     }
 
     return rev;
+#endif
 }
 
 int c64rom_cartkernal_active = 0;

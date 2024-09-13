@@ -161,7 +161,6 @@ SOURCES_C_COMMON := \
     $(EMU)/rs232drv/rs232net.c \
     $(EMU)/rs232drv/rsuser.c \
     $(EMU)/screenshot.c \
-    $(EMU)/sha1.c \
     $(EMU)/snapshot.c \
     $(EMU)/socket.c \
     $(EMU)/sound.c \
