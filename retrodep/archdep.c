@@ -89,7 +89,6 @@
 #include "arch/shared/archdep_remove.c"
 #include "arch/shared/archdep_set_openmp_wait_policy.c"
 #include "arch/shared/archdep_tick.c"
-#include "arch/shared/coproc.c"
 
 #include "libretro-core.h"
 extern unsigned int opt_read_vicerc;
@@ -710,3 +709,6 @@ char *archdep_default_joymap_file_name(void) { return ""; }
 int ui_hotkeys_resources_init(void) { return 0; }
 int ui_hotkeys_cmdline_options_init(void) { return 0; }
 void ui_hotkeys_shutdown(void) {}
+
+int fork_coproc(int *fd_wr, int *fd_rd, char *cmd, pid_t *pid) { return -1; }
+void kill_coproc(pid_t pid) {}
