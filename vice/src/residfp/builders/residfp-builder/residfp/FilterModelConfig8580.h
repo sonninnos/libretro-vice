@@ -42,15 +42,11 @@ class FilterModelConfig8580 final : public FilterModelConfig
 private:
     static std::unique_ptr<FilterModelConfig8580> instance;
     // This allows access to the private constructor
-#ifdef HAVE_CXX11
     friend std::unique_ptr<FilterModelConfig8580>::deleter_type;
-#else
-    friend class std::auto_ptr<FilterModelConfig8580>;
-#endif
 
 private:
     FilterModelConfig8580();
-    ~FilterModelConfig8580() DEFAULT;
+    ~FilterModelConfig8580() = default;
 
 public:
     static FilterModelConfig8580* getInstance();
@@ -60,7 +56,7 @@ public:
      *
      * @return the integrator
      */
-    std::unique_ptr<Integrator8580> buildIntegrator();
+    Integrator* buildIntegrator() override;
 };
 
 } // namespace reSIDfp
