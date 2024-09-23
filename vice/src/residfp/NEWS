@@ -1,3 +1,35 @@
+2.9.0 2024-08-12
+* residfp: use c++11 threads for building filter tables (#92)
+* residfp: code modernization and minor performance optimizations
+* Performance optimizations (#133, #137)
+
+
+
+2.8.0 2024-06-09
+* Optimized event scheduler (#131)
+* Stop pretendig we support pre-c++11 compilers (#130)
+* Fixed thread unsafety for psid_driver (#132)
+* residfp: do not cache resampling tables (#91)
+* resid/residfp: tuned oscillator leakage
+
+
+
+2.7.1 2024-05-19
+* Sync resid with upstream
+* Make strong CWs the default (#127)
+* Downtune the leakage parameter a bit (#126)
+* Fix UBSan complaint abount uninitialized var 'is6581'
+
+
+
+2.7.0 2024-03-29
+* residfp: refactor residfp filter (#109)
+* residfp: added ability to adjust the uCox parameter at runtime (#101)
+* residfp: allow setting the combined waveforms strength (#110)
+* resid/residfp: emulate oscillator leakage (#102)
+
+
+
 2.6.0 2024-01-01
 * residfp is now thread-safe (#71)
 * residfp: fixed SSE2 version of convolve (#105)
