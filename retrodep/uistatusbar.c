@@ -605,21 +605,27 @@ static void display_joyport(void)
 
     if (vice_opt.UserportJoyType == -1)
     {
+        int offset_multi = ceil((retrow - retrow_crop + 8) / 16.0f);
+        int offset = 7 - offset_multi;
+
+        for (int i = 0; i < offset + 1; i++)
+            snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "%1s", "");
+
 #if defined(__X128__)
-        snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "%6s %2s %2s", "", "CL", "SL");
+        snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "%2s %2s", "CL", "SL");
 
         if (c128_capslock)
         {
-            tmpstr[6+6+6+1] |= 0x80;
-            tmpstr[6+6+6+2] |= 0x80;
+            tmpstr[6+6+offset+1] |= 0x80;
+            tmpstr[6+6+offset+2] |= 0x80;
         }
 #else
-        snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "%6s %2s %2s", "", "", "SL");
+        snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "%2s %2s", "  ", "SL");
 #endif
         if (retro_capslock)
         {
-            tmpstr[6+6+6+3+1] |= 0x80;
-            tmpstr[6+6+6+3+2] |= 0x80;
+            tmpstr[6+6+offset+3+1] |= 0x80;
+            tmpstr[6+6+offset+3+2] |= 0x80;
         }
     }
 
@@ -842,7 +848,7 @@ void uistatusbar_draw(void)
         led_width += LED_WIDTH(4) - char_scale_x;
 
     /* LED horizontal start */
-    led_x = retrow_crop - led_width + char_scale_x - 1;
+    led_x = retroXS_crop_offset + retrow_crop - led_width + char_scale_x - 1;
 
     /* Basic mode statusbar background */
     if (opt_statusbar & STATUSBAR_BASIC && !statusbar_message_timer)
