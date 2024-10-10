@@ -180,7 +180,7 @@ endif
 # iOS
 else ifneq (,$(findstring ios,$(platform)))
    TARGET := $(TARGET_NAME)_libretro_ios.dylib
-   COMMONFLAGS += -DHAVE_POSIX_MEMALIGN=1 -marm
+   COMMONFLAGS += -DHAVE_POSIX_MEMALIGN=1
    MINVERSION :=
    fpic = -fPIC
    LDFLAGS += -dynamiclib
@@ -191,8 +191,8 @@ else ifneq (,$(findstring ios,$(platform)))
       CC = clang -arch arm64 -isysroot $(IOSSDK)
       CXX = clang++ -arch arm64 -isysroot $(IOSSDK)
    else
-      CC = clang -arch armv7 -isysroot $(IOSSDK)
-      CXX = clang++ -arch armv7 -isysroot $(IOSSDK)
+      CC = clang -marm -arch armv7 -isysroot $(IOSSDK)
+      CXX = clang++ -marm -arch armv7 -isysroot $(IOSSDK)
    endif
    COMMONFLAGS += -DIOS
    CFLAGS += -DHAVE_STRLCPY -DHAVE_VSNPRINTF -DHAVE_SNPRINTF -DHAVE_STPCPY -D_INTTYPES_H
@@ -206,7 +206,7 @@ else ifneq (,$(findstring ios,$(platform)))
 
 else ifeq ($(platform), tvos-arm64)
    TARGET := $(TARGET_NAME)_libretro_tvos.dylib
-   COMMONFLAGS += -DHAVE_POSIX_MEMALIGN=1 -marm
+   COMMONFLAGS += -DHAVE_POSIX_MEMALIGN=1
    fpic = -fPIC
    LDFLAGS += -dynamiclib
    ifeq ($(IOSSDK),)
