@@ -2342,7 +2342,7 @@ static void retro_set_paths(void)
 
    if (string_is_empty(retro_system_directory))
    {
-#if defined(ANDROID)
+#if defined(ANDROID_FIXME)
       strlcpy(retro_system_directory, "/mnt/sdcard", sizeof(retro_system_directory));
 #elif defined(VITA)
       strlcpy(retro_system_directory, "ux0:/data", sizeof(retro_system_directory));
@@ -2358,11 +2358,16 @@ static void retro_set_paths(void)
             retro_save_directory, ARCHDEP_DIR_SEP_STR, "TEMP");
 
    /* Use system directory for data files such as JiffyDOS and keymaps */
-   snprintf(retro_system_data_directory, sizeof(retro_system_data_directory), "%s%s%s",
+   if (!string_is_empty(retro_system_directory))
+   {
+      snprintf(retro_system_data_directory, sizeof(retro_system_data_directory), "%s%s%s",
             retro_system_directory, ARCHDEP_DIR_SEP_STR, "vice");
 
-   if (retro_system_data_directory[0] != '.' && !path_is_directory(retro_system_data_directory))
-      archdep_mkdir(retro_system_data_directory, 0);
+      if (     retro_system_data_directory[0] != '.'
+            && retro_system_data_directory[0] != ARCHDEP_DIR_SEP_CHR
+            && !path_is_directory(retro_system_data_directory))
+         archdep_mkdir(retro_system_data_directory, 0);
+   }
 }
 
 static void free_vice_carts(void)
