@@ -159,8 +159,8 @@ static void video_canvas_crop(struct video_canvas_s *canvas)
 #endif
 
    /* Reset to maximum crop */
-   vice_raster.first_line = (!crop_id_prev) ? 0 : crop_top_border;
-   vice_raster.last_line  = (!crop_id_prev) ? retroh : vice_raster.first_line + crop_height_max;
+   vice_raster.first_line = (crop_id == 0 && crop_id != crop_id_prev) ? 0 : crop_top_border;
+   vice_raster.last_line  = (crop_id == 0 && crop_id != crop_id_prev) ? retroh : vice_raster.first_line + crop_height_max;
 
    switch (crop_id)
    {
