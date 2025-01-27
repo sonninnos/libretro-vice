@@ -68,6 +68,7 @@ extern void retro_fastforwarding(bool enabled);
 extern void sound_volume_counter_reset(void);
 extern int16_t *audio_buffer;
 extern int tape_enabled;
+extern bool retro_sound_keep_alive;
 #endif
 
 static log_t sound_log = LOG_ERR;
@@ -1174,6 +1175,9 @@ int sound_open(void)
      *       faster and compensate errors better. */
     fragsize = speed / ((rfsh_per_sec < 1.0) ? 1 : ((int)rfsh_per_sec))
                / fragment_divisor[fragment_size];
+#ifdef __LIBRETRO__
+    fragsize = 0;
+#endif
     if (pdev) {
         if (channels <= pdev->max_channels) {
             fragsize *= channels;
@@ -1324,6 +1328,12 @@ static void sounddev_close(const sound_device_t **dev)
 /* close sid */
 void sound_close(void)
 {
+#ifdef __LIBRETRO__
+    if (retro_sound_keep_alive)
+        sound_state_changed = FALSE;
+    if (!sound_state_changed && !sound_playdev_reopen)
+        return;
+#endif
     sounddev_close(&snddata.playdev);
     sounddev_close(&snddata.recdev);
     sid_close();

@@ -343,7 +343,6 @@ int ui_init_finalize(void)
    resources_set_int("SoundVolume", 0);
 
    /* Sensible defaults */
-   log_resources_set_int("SoundFragmentSize", SOUND_FRAGMENT_SMALL);
    log_resources_set_int("AutostartPrgMode", 1);
    log_resources_set_int("AutostartDelayRandom", 0);
    log_resources_set_int("FSDeviceLongNames", 1);

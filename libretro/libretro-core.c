@@ -46,6 +46,7 @@
 /* Main CPU loop */
 long retro_now = 0;
 unsigned retro_renderloop = 1;
+bool retro_sound_keep_alive = false;
 
 /* VKBD */
 extern bool retro_vkbd;
@@ -8592,6 +8593,8 @@ void retro_run(void)
          prev_sound_sample_rate = vice_opt.SoundSampleRate;
 
          /* Ensure audio rendering is reinitialized on next use */
+         sound_state_changed = true;
+         retro_sound_keep_alive = false;
          sound_close();
 
          struct retro_system_av_info system_av_info;
@@ -8705,6 +8708,8 @@ void retro_run(void)
       maincpu_mainloop();
    retro_renderloop = 1;
    retro_now += 1000000 / retro_refresh;
+
+   retro_sound_keep_alive = false;
 
    /* LED interface */
    if (led_state_cb)
@@ -8894,6 +8899,7 @@ void retro_unload_game(void)
    free(autostartProgram);
    autostartProgram = NULL;
 
+   retro_sound_keep_alive = false;
    cur_port_locked = false;
    opt_aspect_ratio_locked = false;
    noautostart_locked = false;
@@ -8996,8 +9002,6 @@ static void retro_unserialize_post(void)
       vsync_set_warp_mode(0);
    /* Reset LED status */
    vice_led_state[RETRO_LED_POWER] = vice_led_state[RETRO_LED_DRIVE] = vice_led_state[RETRO_LED_TAPE] = 0;
-   /* Make rewinding sound less jarring */
-   sound_volume_counter_reset();
    /* Dismiss possible restart request */
    request_restart = false;
    /* Sync Disc Control index for D64 multidisks */
@@ -9075,6 +9079,7 @@ bool retro_unserialize(const void *data_, size_t size)
 {
    if (retro_ui_finalized)
    {
+      retro_sound_keep_alive = true;
       snapshot_stream = snapshot_memory_read_fopen(data_, size);
       int success = 0;
       interrupt_maincpu_trigger_trap(load_trap, (void *)&success);

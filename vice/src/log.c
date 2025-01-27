@@ -43,6 +43,7 @@
 #ifdef __LIBRETRO__
 #include <libretro.h>
 #include "string/stdstring.h"
+extern bool retro_sound_keep_alive;
 extern retro_log_printf_t log_cb;
 static char log_buf[1024]; /*create this here in case of tiny stack*/
 #endif
@@ -534,6 +535,9 @@ int log_message(log_t log, const char *format, ...)
     va_list ap;
     int rc;
 
+    if (retro_sound_keep_alive)
+       return 0;
+
     va_start(ap, format);
     rc = log_helper(RETRO_LOG_INFO, log, format, ap);
     va_end(ap);
@@ -545,6 +549,9 @@ int log_warning(log_t log, const char *format, ...)
 {
     va_list ap;
     int rc;
+
+    if (retro_sound_keep_alive)
+       return 0;
 
     va_start(ap, format);
     rc = log_helper(RETRO_LOG_WARN, log, format, ap);
