@@ -2358,19 +2358,8 @@ static void retro_set_paths(void)
             retro_save_directory, ARCHDEP_DIR_SEP_STR, "TEMP");
 
    /* Use system directory for data files such as JiffyDOS and keymaps */
-   if (!string_is_empty(retro_system_directory))
-   {
-      snprintf(retro_system_data_directory, sizeof(retro_system_data_directory), "%s%s%s",
+   snprintf(retro_system_data_directory, sizeof(retro_system_data_directory), "%s%s%s",
             retro_system_directory, ARCHDEP_DIR_SEP_STR, "vice");
-
-      if (     retro_system_data_directory[0] != '.'
-            && !path_is_directory(retro_system_data_directory))
-      {
-         if (log_cb)
-            log_cb(RETRO_LOG_INFO, "Mkdir: \"%s\"\n", retro_system_data_directory);
-         archdep_mkdir(retro_system_data_directory, 0);
-      }
-   }
 }
 
 static void free_vice_carts(void)
@@ -8046,6 +8035,15 @@ void retro_init(void)
    /* Clean ZIP temp */
    if (!string_is_empty(retro_temp_directory) && path_is_directory(retro_temp_directory))
       remove_recurse(retro_temp_directory);
+
+   /* Use system directory for data files such as JiffyDOS and keymaps */
+   if (     !string_is_empty(retro_system_data_directory)
+         && retro_system_data_directory[0] != '.'
+         && !path_is_directory(retro_system_data_directory))
+   {
+      log_cb(RETRO_LOG_INFO, "Mkdir system data directory: \"%s\"\n", retro_system_data_directory);
+      archdep_mkdir(retro_system_data_directory, 0);
+   }
 
    /* Disk Control interface */
    dc = dc_create();
