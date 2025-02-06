@@ -5155,6 +5155,7 @@ error:
 
 static const struct retro_controller_description joyport_controllers[] =
 {
+   { "RetroPad", RETRO_DEVICE_JOYPAD },
    { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
    { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
    { "None", RETRO_DEVICE_NONE },
