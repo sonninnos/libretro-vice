@@ -8062,10 +8062,6 @@ void retro_init(void)
    struct retro_core_options_update_display_callback update_display_callback = {retro_update_display};
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_UPDATE_DISPLAY_CALLBACK, &update_display_callback);
 
-   /* Keep as incomplete until rewind can be enabled at startup (snapshot size is 0 at that time) */
-   static uint64_t quirks = RETRO_SERIALIZATION_QUIRK_INCOMPLETE | RETRO_SERIALIZATION_QUIRK_MUST_INITIALIZE | RETRO_SERIALIZATION_QUIRK_CORE_VARIABLE_SIZE;
-   environ_cb(RETRO_ENVIRONMENT_SET_SERIALIZATION_QUIRKS, &quirks);
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_INPUT_BITMASKS, NULL))
       libretro_supports_bitmasks = true;
 
@@ -8587,6 +8583,7 @@ void retro_run(void)
    {
       /* Load content was called while core was already running, just do a reset with autostart */
       runstate = RUNSTATE_RUNNING;
+      request_restart = true;
    }
    else if (runstate == RUNSTATE_RUNNING)
    {
@@ -9086,6 +9083,10 @@ bool retro_unserialize(const void *data_, size_t size)
 {
    if (retro_ui_finalized)
    {
+      /* Must stop autostart, or prg content will continue autostarting
+       * after autosaved state is autoloaded on startup */
+      autostart_reset();
+      /* Don't stop and start audio on every frame while rewinding */
       retro_sound_keep_alive = true;
       snapshot_stream = snapshot_memory_read_fopen(data_, size);
       int success = 0;
