@@ -22,10 +22,13 @@ extern bool c128_capslock;
 #if POINTER_DEBUG
 static int pointer_x = 0;
 static int pointer_y = 0;
+static int pointer_p = 0;
 #endif
 static int last_pointer_x = 0;
 static int last_pointer_y = 0;
-
+static int last_pointer_p = 0;
+static bool pointer_active = false;
+static bool vkey_active = true;
 /* VKBD starting point: 10x3 == f7 */
 static int vkey_pos_x = 10;
 #ifdef __X128__
@@ -805,7 +808,7 @@ void print_vkbd(void)
                       0, BRD_ALPHA);
          }
          /* Not selected key */
-         else if (((vkey_pos_y * VKBDX) + vkey_pos_x + page) != ((y * VKBDX) + x + page))
+         else if (!vkey_active || ((vkey_pos_y * VKBDX) + vkey_pos_x + page) != ((y * VKBDX) + x + page))
          {
             int FONT_ALPHA = BKG_ALPHA;
             FONT_ALPHA = (FONT_ALPHA < GRAPH_ALPHA_25) ? GRAPH_ALPHA_25 : FONT_ALPHA;
@@ -835,23 +838,29 @@ void print_vkbd(void)
          ? ((BKG_ALPHA == GRAPH_ALPHA_100) ? GRAPH_ALPHA_100 : GRAPH_ALPHA_75)
          : GRAPH_ALPHA_100;
 
-   /* Selected key */
-   int current_key_pos = (vkey_pos_y * VKBDX) + vkey_pos_x + page;
-   int current_key_val = vkeys[current_key_pos].value;
+   int current_key_pos = 0;
+   int current_key_val = 0;
 
-   /* Pressed key color */
-   if (vkflag[RETRO_DEVICE_ID_JOYPAD_B] && (current_key_val == vkey_sticky1 ||
-                                            current_key_val == vkey_sticky2))
-      ; /* no-op */
-   else if (vkflag[RETRO_DEVICE_ID_JOYPAD_B] || retro_key_state_internal[(current_key_val > 0) ? current_key_val : 0])
-      BKG_COLOR_SEL = BKG_COLOR_ACTIVE;
-   else
-      FONT_COLOR = FONT_COLOR_SEL;
+   if (vkey_active)
+   {
+      /* Selected key */
+      current_key_pos = (vkey_pos_y * VKBDX) + vkey_pos_x + page;
+      current_key_val = vkeys[current_key_pos].value;
 
-   /* Selected key string */
-   snprintf(string, sizeof(string), "%s",
-         (!shifted) ? vkeys[current_key_pos].normal
-                    : vkeys[current_key_pos].shift);
+      /* Pressed key color */
+      if (vkflag[RETRO_DEVICE_ID_JOYPAD_B] && (current_key_val == vkey_sticky1 ||
+                                               current_key_val == vkey_sticky2))
+         ; /* no-op */
+      else if (vkflag[RETRO_DEVICE_ID_JOYPAD_B] || retro_key_state_internal[(current_key_val > 0) ? current_key_val : 0])
+         BKG_COLOR_SEL = BKG_COLOR_ACTIVE;
+      else
+         FONT_COLOR = FONT_COLOR_SEL;
+
+      /* Selected key string */
+      snprintf(string, sizeof(string), "%s",
+            (!shifted) ? vkeys[current_key_pos].normal
+                       : vkeys[current_key_pos].shift);
+   }
 
    /* Reset key */
    if (current_key_val == VKBD_RESET)
@@ -897,28 +906,31 @@ void print_vkbd(void)
    if (strchr(string, '\1'))
       BKG_PADDING_Y = -6;
 
-   x_gap = 0;
-   if (VKBDX_GAP_POS && VKBDX_GAP_PAD && vkey_pos_x >= VKBDX_GAP_POS)
-      x_gap = vkbd_x_gap_pad;
-   y_gap = 0;
-   if (VKBDY_GAP_POS && VKBDY_GAP_PAD && vkey_pos_y >= VKBDY_GAP_POS)
-      y_gap = vkbd_y_gap_pad;
+   if (vkey_active)
+   {
+      x_gap = 0;
+      if (VKBDX_GAP_POS && VKBDX_GAP_PAD && vkey_pos_x >= VKBDX_GAP_POS)
+         x_gap = vkbd_x_gap_pad;
+      y_gap = 0;
+      if (VKBDY_GAP_POS && VKBDY_GAP_PAD && vkey_pos_y >= VKBDY_GAP_POS)
+         y_gap = vkbd_y_gap_pad;
 
-   /* Selected key position */
-   XKEY  = x_gap + XOFFSET + XBASEKEY + (vkey_pos_x * XSIDE);
-   XTEXT = x_gap + XOFFSET + XBASETEXT + BKG_PADDING_X + (vkey_pos_x * XSIDE);
-   YKEY  = y_gap + YOFFSET + YBASEKEY + (vkey_pos_y * YSIDE);
-   YTEXT = y_gap + YOFFSET + YBASETEXT + BKG_PADDING_Y + (vkey_pos_y * YSIDE);
+      /* Selected key position */
+      XKEY  = x_gap + XOFFSET + XBASEKEY + (vkey_pos_x * XSIDE);
+      XTEXT = x_gap + XOFFSET + XBASETEXT + BKG_PADDING_X + (vkey_pos_x * XSIDE);
+      YKEY  = y_gap + YOFFSET + YBASEKEY + (vkey_pos_y * YSIDE);
+      YTEXT = y_gap + YOFFSET + YBASETEXT + BKG_PADDING_Y + (vkey_pos_y * YSIDE);
 
-   /* Selected key background */
-   draw_fbox(XKEY+XKEYSPACING, YKEY+YKEYSPACING,
-             XSIDE-XKEYSPACING, YSIDE-YKEYSPACING,
-             BKG_COLOR_SEL, BKG_ALPHA);
+      /* Selected key background */
+      draw_fbox(XKEY+XKEYSPACING, YKEY+YKEYSPACING,
+                XSIDE-XKEYSPACING, YSIDE-YKEYSPACING,
+                BKG_COLOR_SEL, BKG_ALPHA);
 
-   /* Selected key text */
-   draw_text(XTEXT, YTEXT, FONT_COLOR, 0, GRAPH_ALPHA_100,
-             GRAPH_BG_NONE, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
-             string);
+      /* Selected key text */
+      draw_text(XTEXT, YTEXT, FONT_COLOR, 0, GRAPH_ALPHA_100,
+                GRAPH_BG_NONE, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
+                string);
+   }
 
    if (BRD_ALPHA == GRAPH_ALPHA_0)
       return;
@@ -972,7 +984,7 @@ void print_vkbd(void)
    }
 
 #if POINTER_DEBUG
-   draw_hline(pointer_x, pointer_y, 1, 1, RGBc(255, 0, 255));
+   draw_hline(pointer_x, pointer_y, 1, 1, pointer_p ? RGBc(0, 255, 0) : RGBc(255, 0, 255));
 #endif
 }
 
@@ -1319,14 +1331,20 @@ void input_vkbd(void)
    /* Absolute pointer */
    int p_x = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X);
    int p_y = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y);
+   int p_p = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED);
 
-   if (p_x != 0 && p_y != 0 && (p_x != last_pointer_x || p_y != last_pointer_y))
+   /* Enable pointer only after first pointer press. Pointer is also disabled with joypad navigation. */
+   if (!last_pointer_p && p_p)
+      pointer_active = true;
+
+   if (!pointer_active)
+      p_x = p_y = 0;
+
+   if (p_x != 0 && p_y != 0 && (p_x != last_pointer_x || p_y != last_pointer_y || p_p != last_pointer_p))
    {
       int px = (int)((p_x + 0x7fff) * retrow_crop / 0xffff + retroXS_offset);
       int py = (int)((p_y + 0x7fff) * retroh_crop / 0xffff + retroYS_offset);
-
-      last_pointer_x = p_x;
-      last_pointer_y = p_y;
+      bool inside = false;
 
       if (px >= vkbd_x_min && px <= vkbd_x_max && py >= vkbd_y_min && py <= vkbd_y_max)
       {
@@ -1344,11 +1362,23 @@ void input_vkbd(void)
          vkey_pos_x = (vkey_pos_x > VKBDX - 1) ? VKBDX - 1 : vkey_pos_x;
          vkey_pos_y = (vkey_pos_y < 0) ? 0 : vkey_pos_y;
          vkey_pos_y = (vkey_pos_y > VKBDY - 1) ? VKBDY - 1 : vkey_pos_y;
+         inside = true;
       }
+
+      if ((last_pointer_p && !p_p) || !inside)
+         vkey_active = false;
+      else if ((!last_pointer_p && p_p))
+         vkey_active = true;
+
+      last_pointer_x = p_x;
+      last_pointer_y = p_y;
+      last_pointer_p = p_p;
+
 #if POINTER_DEBUG
       pointer_x = px;
       pointer_y = py;
-      printf("px:%d py:%d (%d,%d) vkey:%dx%d\n", p_x, p_y, px, py, vkey_pos_x, vkey_pos_y);
+      pointer_p = p_p;
+      printf("px:%d py:%d (%d,%d) pr:%d vkey:%dx%d\n", p_x, p_y, px, py, p_p, vkey_pos_x, vkey_pos_y);
 #endif
    }
 
@@ -1375,7 +1405,8 @@ void input_vkbd(void)
                                              (joypad_bits[1] & (1 << i))))
    {
       vkflag[i] = 1;
-      vkey_pressed = vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + ((retro_vkbd_page) ? VKBDX * VKBDY : 0)].value;
+      if (vkey_active)
+         vkey_pressed = vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + ((retro_vkbd_page) ? VKBDX * VKBDY : 0)].value;
       vkbd_mapping_key = vkey_pressed;
 
       last_vkey_pressed = vkey_pressed;
@@ -1444,7 +1475,8 @@ void input_vkbd(void)
                       input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED)))
    {
       vkflag[i] = 1;
-      vkey_pressed = vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + ((retro_vkbd_page) ? VKBDX * VKBDY : 0)].value;
+      if (vkey_active)
+         vkey_pressed = vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + ((retro_vkbd_page) ? VKBDX * VKBDY : 0)].value;
 
       if (vkey_pressed != -1 && last_vkey_pressed == -1)
       {
@@ -1603,8 +1635,11 @@ void input_vkbd(void)
        vkflag[RETRO_DEVICE_ID_JOYPAD_LEFT] ||
        vkflag[RETRO_DEVICE_ID_JOYPAD_RIGHT])
    {
+      /* Always enable vkey and disable pointer */
+      vkey_active    = true;
+      pointer_active = false;
+
       if (let_go_of_direction)
-         /* just pressing down */
          last_press_time = now;
 
       if ((now - last_press_time > VKBD_MIN_HOLDING_TIME
