@@ -29,12 +29,12 @@ static int last_pointer_y = 0;
 static int last_pointer_p = 0;
 static bool pointer_active = false;
 static bool vkey_active = true;
-/* VKBD starting point: 10x3 == f7 */
+/* VKBD starting point: 10x0 == f1 (C128 10x1) */
 static int vkey_pos_x = 10;
 #ifdef __X128__
-static int vkey_pos_y = 4;
+static int vkey_pos_y = 1;
 #else
-static int vkey_pos_y = 3;
+static int vkey_pos_y = 0;
 #endif
 static int vkbd_x_min = 0;
 static int vkbd_x_max = 0;
