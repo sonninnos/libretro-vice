@@ -572,16 +572,18 @@ static void display_joyport(void)
 
     /* Lightpen/gun */
     if (opt_joyport_type > 10)
-        snprintf(tmpstr, sizeof(tmpstr), "L%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
+       tmplen += snprintf(tmpstr, sizeof(tmpstr), "L%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
     /* Mouse */
     else if (opt_joyport_type > 2)
-       snprintf(tmpstr, sizeof(tmpstr), "M%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
+       tmplen += snprintf(tmpstr, sizeof(tmpstr), "M%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
     /* Paddles */
     else if (opt_joyport_type == 2)
-       snprintf(tmpstr, sizeof(tmpstr), "P%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
+       tmplen += snprintf(tmpstr, sizeof(tmpstr), "P%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
     /* Joystick */
     else
-       snprintf(tmpstr, sizeof(tmpstr), "J%s%3s ", joy1, joystick_value_human(get_joystick_value(1-1), 0));
+       tmplen += snprintf(tmpstr, sizeof(tmpstr), "J%s%3s ", joy1, joystick_value_human(get_joystick_value(1-1), 0));
+
+    tmplen += snprintf(tmpstr + tmplen, sizeof(tmpstr) - tmplen, "%6s", "");
 #endif
 
 #if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
