@@ -25,12 +25,16 @@
 
 .core-defs-xcbm2:
   extends: .core-defs
+  rules:
+    - when: never
   variables:
     CORENAME: vice_xcbm2
     EMUTYPE: xcbm2
 
 .core-defs-xcbm5x0:
   extends: .core-defs
+  rules:
+    - when: never
   variables:
     CORENAME: vice_xcbm5x0
     EMUTYPE: xcbm5x0
