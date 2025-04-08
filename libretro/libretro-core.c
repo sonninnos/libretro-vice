@@ -3054,26 +3054,6 @@ static void retro_set_core_options()
          "enabled"
       },
       {
-         "vice_zoom_mode",
-         "Video > Zoom Mode",
-         "Zoom Mode",
-         "Hidden placeholder for backwards compatibility.",
-         NULL,
-         "video",
-         {
-            { "deprecated", NULL },
-            { "disabled", NULL },
-            { "small", "Small" },
-            { "medium", "Medium" },
-            { "maximum", "Maximum" },
-            { "auto", "Automatic" },
-            { "auto_disable", "Auto-Disable" },
-            { "manual", "Manual" },
-            { NULL, NULL },
-         },
-         "deprecated"
-      },
-      {
          "vice_crop_mode",
          "Video > Crop Mode",
          "Crop Mode",
@@ -3091,26 +3071,6 @@ static void retro_set_core_options()
             { NULL, NULL },
          },
          "both"
-      },
-      {
-         "vice_zoom_mode_crop",
-         "Video > Zoom Mode Crop",
-         "Zoom Mode Crop",
-         "Hidden placeholder for backwards compatibility.",
-         NULL,
-         "video",
-         {
-            { "deprecated", NULL },
-            { "both", "Horizontal + Vertical" },
-            { "horizontal", "Horizontal" },
-            { "vertical", "Vertical" },
-            { "16:9", "16:9" },
-            { "16:10", "16:10" },
-            { "4:3", "4:3" },
-            { "5:4", "5:4" },
-            { NULL, NULL },
-         },
-         "deprecated"
       },
       {
          "vice_manual_crop_top",
@@ -4287,16 +4247,6 @@ static void retro_set_core_options()
          {{ NULL, NULL }},
          "---"
       },
-      {
-         "vice_mapper_zoom_mode_toggle",
-         "Hotkey > Toggle Zoom Mode",
-         "Toggle Zoom Mode",
-         "Hidden placeholder for backwards compatibility.",
-         NULL,
-         "hotkey",
-         {{ NULL, NULL }},
-         "---"
-      },
 #if !defined(__XSCPU64__) && !defined(__X64DTV__)
       /* Datasette controls */
       {
@@ -5252,15 +5202,6 @@ void retro_set_options_display(void)
    option_display.key = "vice_crop_delay";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 
-   /* Legacy zoom always hidden */
-   option_display.visible = false;
-   option_display.key = "vice_zoom_mode";
-   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_zoom_mode_crop";
-   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_mapper_zoom_mode_toggle";
-   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-
    /*** Options display ***/
    if (libretro_supports_option_categories)
    {
@@ -5518,19 +5459,13 @@ void retro_set_options_display(void)
 #endif
 }
 
-static bool updating_variables = false;
 static bool retro_update_display(void)
 {
-   if (updating_variables)
-      return false;
-
    /* Core options */
    bool updated = false;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
-   {
       update_variables();
-      retro_set_options_display();
-   }
+
    return updated;
 }
 
@@ -5601,7 +5536,6 @@ static void update_variables(void)
 {
    struct retro_variable var = {0};
 
-   updating_variables = true;
 #ifdef RETRO_DEBUG
    log_cb(RETRO_LOG_INFO, "Updating variables, UI finalized = %d\n", retro_ui_finalized);
 #endif
@@ -7615,88 +7549,8 @@ static void update_variables(void)
    }
 #endif
 
+   /* Hide/show core options */
    retro_set_options_display();
-
-   /* Handle migration compatibility with old "zoom" */
-   bool request_update_variables      = false;
-   int legacy_zoom                    = -1;
-   int legacy_zoom_crop               = -1;
-   int legacy_zoom_toggle             = -1;
-   char legacy_zoom_string[20]        = {0};
-   char legacy_zoom_crop_string[20]   = {0};
-   char legacy_zoom_toggle_string[20] = {0};
-
-   var.key = "vice_zoom_mode";
-   var.value = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      if      (!strcmp(var.value, "disabled"))     legacy_zoom = CROP_NONE;
-      else if (!strcmp(var.value, "small"))        legacy_zoom = CROP_SMALL;
-      else if (!strcmp(var.value, "medium"))       legacy_zoom = CROP_MEDIUM;
-      else if (!strcmp(var.value, "maximum"))      legacy_zoom = CROP_MAXIMUM;
-      else if (!strcmp(var.value, "manual"))       legacy_zoom = CROP_MANUAL;
-      else if (!strcmp(var.value, "auto"))         legacy_zoom = CROP_AUTO;
-      else if (!strcmp(var.value, "auto_disable")) legacy_zoom = CROP_AUTO_DISABLE;
-
-      strlcpy(legacy_zoom_string, var.value, sizeof(legacy_zoom_string));
-   }
-
-   var.key = "vice_zoom_mode_crop";
-   var.value = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      if      (!strcmp(var.value, "both"))       legacy_zoom_crop = CROP_MODE_BOTH;
-      else if (!strcmp(var.value, "vertical"))   legacy_zoom_crop = CROP_MODE_VERTICAL;
-      else if (!strcmp(var.value, "horizontal")) legacy_zoom_crop = CROP_MODE_HORIZONTAL;
-      else if (!strcmp(var.value, "16:9"))       legacy_zoom_crop = CROP_MODE_16_9;
-      else if (!strcmp(var.value, "16:10"))      legacy_zoom_crop = CROP_MODE_16_10;
-      else if (!strcmp(var.value, "4:3"))        legacy_zoom_crop = CROP_MODE_4_3;
-      else if (!strcmp(var.value, "5:4"))        legacy_zoom_crop = CROP_MODE_5_4;
-
-      strlcpy(legacy_zoom_crop_string, var.value, sizeof(legacy_zoom_crop_string));
-   }
-
-   var.key = "vice_mapper_zoom_mode_toggle";
-   var.value = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      legacy_zoom_toggle = retro_keymap_id(var.value);
-      strlcpy(legacy_zoom_toggle_string, var.value, sizeof(legacy_zoom_toggle_string));
-   }
-
-   if (legacy_zoom > CROP_NONE)
-   {
-      log_cb(RETRO_LOG_INFO, "Migrating 'zoom_mode' to 'crop'..\n");
-      set_variable("vice_crop", legacy_zoom_string);
-      request_update_variables = true;
-   }
-
-   if (legacy_zoom_crop > 0)
-   {
-      log_cb(RETRO_LOG_INFO, "Migrating 'zoom_mode_crop' to 'crop_mode'..\n");
-      set_variable("vice_crop_mode", legacy_zoom_crop_string);
-      request_update_variables = true;
-   }
-
-   if (legacy_zoom_toggle > 0)
-   {
-      log_cb(RETRO_LOG_INFO, "Migrating 'mapper_zoom_mode_toggle' to 'mapper_crop_toggle'..\n");
-      set_variable("vice_mapper_crop_toggle", legacy_zoom_toggle_string);
-      request_update_variables = true;
-   }
-
-   if (strcmp(legacy_zoom_string, "deprecated"))
-      set_variable("vice_zoom_mode", "deprecated");
-
-   if (strcmp(legacy_zoom_crop_string, "deprecated"))
-      set_variable("vice_zoom_mode_crop", "deprecated");
-
-   if (strcmp(legacy_zoom_toggle_string, "---"))
-      set_variable("vice_mapper_zoom_mode_toggle", "---");
-
-   updating_variables = false;
-   if (request_update_variables)
-      update_variables();
 }
 
 void emu_reset(int type)
