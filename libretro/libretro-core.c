@@ -825,6 +825,19 @@ static int process_cmdline(const char* argv)
             case 1: /* Generated playlist */
                zip_m3u = fopen(zip_m3u_list.path, "w");
                qsort(zip_m3u_list.list, zip_m3u_list.num, RETRO_PATH_MAX, qstrcmp);
+
+               /* Flip memory image first if last */
+               if (     dc_get_image_type(zip_m3u_list.list[0]) != DC_IMAGE_TYPE_MEM
+                     && dc_get_image_type(zip_m3u_list.list[zip_m3u_list.num - 1]) == DC_IMAGE_TYPE_MEM)
+               {
+                  for (int l = zip_m3u_list.num; l > -1; l--)
+                  {
+                     int k = l + 1;
+                     strlcpy(zip_m3u_list.list[k], zip_m3u_list.list[l], sizeof(zip_m3u_list.list[l]));
+                  }
+                  strlcpy(zip_m3u_list.list[0], zip_m3u_list.list[zip_m3u_list.num], sizeof(zip_m3u_list.list[0]));
+               }
+
                for (int l = 0; l < zip_m3u_list.num; l++)
                   fprintf(zip_m3u, "%s\n", zip_m3u_list.list[l]);
                fclose(zip_m3u);
@@ -866,6 +879,20 @@ static int process_cmdline(const char* argv)
          path_remove_extension(reu_name);
 
          snprintf(reu_path, sizeof(reu_path), "%s%s%s", reu_base, reu_name, ".reu");
+
+         /* Scan differently named REU in TEMP */
+         if (!path_is_valid(reu_path) && strstartswith(argv, retro_temp_directory))
+         {
+            DIR *reu_dir;
+            struct dirent *reu_dirp;
+            reu_dir = opendir(retro_temp_directory);
+            while ((reu_dirp = readdir(reu_dir)) != NULL)
+            {
+               if (strendswith(reu_dirp->d_name, ".reu"))
+                  snprintf(reu_path, sizeof(reu_path), "%s%s%s", retro_temp_directory, ARCHDEP_DIR_SEP_STR, reu_dirp->d_name);
+            }
+            closedir(reu_dir);
+         }
 
          if (path_is_valid(reu_path))
          {
@@ -1198,6 +1225,8 @@ static int process_cmdline(const char* argv)
       {
          /* Some debugging */
          log_cb(RETRO_LOG_INFO, "M3U/VFL parsed, %d file(s) found\n", dc->count);
+         for (unsigned i = 0; i < dc->count; i++)
+            log_cb(RETRO_LOG_DEBUG, "File %d: %s\n", i+1, dc->files[i]);
 
          if (!dc->command)
          {
