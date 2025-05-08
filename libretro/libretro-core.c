@@ -8126,7 +8126,8 @@ float retro_get_aspect_ratio(unsigned int width, unsigned int height, bool pixel
 void update_geometry(int mode)
 {
    struct retro_system_av_info system_av_info;
-   bool update_av_info = false;
+   bool update_av_info  = false;
+   bool update_geometry = true;
 
    defaultw = retrow;
    defaulth = retroh;
@@ -8170,8 +8171,8 @@ void update_geometry(int mode)
          int crop_border_width     = 0;
          int crop_border_height    = 0;
 
-         unsigned prev_crop_width  = retrow_crop;
-         unsigned prev_crop_height = retroh_crop;
+         int retrow_crop_prev      = retrow_crop;
+         int retroh_crop_prev      = retroh_crop;
 
          float crop_dar            = 0;
          float crop_par            = retro_get_aspect_ratio(0, 0, true);
@@ -8327,6 +8328,10 @@ void update_geometry(int mode)
          system_av_info.geometry.base_width   = retrow_crop;
          system_av_info.geometry.base_height  = retroh_crop;
          system_av_info.geometry.aspect_ratio = retro_get_aspect_ratio(retrow_crop, retroh_crop, false);
+
+         if (     retrow_crop_prev == retrow_crop
+               && retroh_crop_prev == retroh_crop)
+            update_geometry = false;
          break;
    }
 
@@ -8339,7 +8344,7 @@ void update_geometry(int mode)
          retro_get_system_av_info(&system_av_info);
          environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &system_av_info);
       }
-      else
+      else if (update_geometry)
       {
          environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &system_av_info);
       }
