@@ -456,8 +456,11 @@ static int sound_machine_calculate_samples(sound_t **psid, int16_t *pbuf, int nr
     CLOCK delta_t_for_other_chips;
 
 #ifdef __LIBRETRO__
+    if (!initial_delta_t)
+        initial_delta_t = (CLOCK)delta_t;
+
     if (nr < 0)
-        return temp;
+        return 0;
 #endif
 
     if (sound_calls[0]->cycle_based() || (!sound_calls[0]->cycle_based() && sound_calls[0]->chip_enabled)) {
