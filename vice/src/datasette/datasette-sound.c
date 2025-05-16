@@ -221,7 +221,7 @@ static int datasette_sound_machine_calculate_samples(sound_t **psid, int16_t *pb
                 float volume_multiplier = 1;
                 if (opt_datasette_sound_volume > 0)
                     volume_multiplier = (float)opt_datasette_sound_volume / 100;
-                int m = datasette_sound_emulation_volume * datasette_square_sign * volume_multiplier;
+                int m = TAPE_SOUND_VOLUME_MAX * datasette_square_sign * volume_multiplier;
                 switch (soc) {
                     default:
                     case 1:
