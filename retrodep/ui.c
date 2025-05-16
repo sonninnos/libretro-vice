@@ -500,19 +500,9 @@ int ui_init_finalize(void)
       log_resources_set_int("DatasetteSound", 0);
 #endif
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__)
-   log_resources_set_int("VICIIAudioLeak", vice_opt.AudioLeak);
+   log_resources_set_int(AUDIOLEAK_RESOURCE, vice_opt.AudioLeak);
    if (vice_opt.AudioLeak && opt_autoloadwarp && !(opt_autoloadwarp & AUTOLOADWARP_MUTE))
-      log_resources_set_int("VICIIAudioLeak", 0);
-#elif defined(__XVIC__)
-   log_resources_set_int("VICAudioLeak", vice_opt.AudioLeak);
-   if (vice_opt.AudioLeak && opt_autoloadwarp && !(opt_autoloadwarp & AUTOLOADWARP_MUTE))
-      log_resources_set_int("VICAudioLeak", 0);
-#elif defined(__XPLUS4__)
-   log_resources_set_int("TEDAudioLeak", vice_opt.AudioLeak);
-   if (vice_opt.AudioLeak && opt_autoloadwarp && !(opt_autoloadwarp & AUTOLOADWARP_MUTE))
-      log_resources_set_int("TEDAudioLeak", 0);
-#endif
+      log_resources_set_int(AUDIOLEAK_RESOURCE, 0);
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
    if (vice_opt.SFXSoundExpanderChip)

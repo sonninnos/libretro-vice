@@ -3710,7 +3710,7 @@ static void retro_set_core_options()
          "disabled"
       },
 #endif
-#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__) || defined(__XPET__) || defined(__XCBM2__)
       {
          "vice_audio_leak_emulation",
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
@@ -3722,8 +3722,11 @@ static void retro_set_core_options()
 #elif defined(__XPLUS4__)
          "Audio > TED Audio Leak Emulation",
          "TED Audio Leak Emulation",
+#elif defined(__XPET__) || defined(__XCBM2__)
+         "Audio > CRTC Audio Leak Emulation",
+         "CRTC Audio Leak Emulation",
 #endif
-         "Graphic chip to audio leak emulation.",
+         "Graphic chip audio leak emulation.",
          NULL,
          "audio",
          {
@@ -5347,7 +5350,7 @@ void retro_set_options_display(void)
    option_display.key = "vice_datasette_sound";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
-#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__) || defined(__XPET__) || defined(__XCBM2__)
    option_display.key = "vice_audio_leak_emulation";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
@@ -5859,7 +5862,7 @@ static void update_variables(void)
    }
 #endif
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__) || defined(__XPET__) || defined(__XCBM2__)
    GET_VAR("audio_leak_emulation")
    {
       int audioleak = 0;

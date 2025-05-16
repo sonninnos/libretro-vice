@@ -340,6 +340,8 @@ extern struct vice_core_options vice_opt;
 #define AUDIOLEAK_RESOURCE "VICAudioLeak"
 #elif defined(__XPLUS4__)
 #define AUDIOLEAK_RESOURCE "TEDAudioLeak"
+#elif defined(__XPET__) || defined(__XCBM2__)
+#define AUDIOLEAK_RESOURCE "CrtcAudioLeak"
 #endif
 
 struct vice_raster_s
