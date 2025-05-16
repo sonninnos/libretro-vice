@@ -443,13 +443,12 @@ void ui_display_tape_control_status(int port, int control)
 void ui_display_tape_counter(int port, int counter)
 {
     if (tape_counter != counter) {
+        tape_counter = (counter < 1000) ? counter : 0;
         display_tape();
 
         if (tape_motor)
            tape_motor = 2;
     }
-
-    tape_counter = (counter < 1000) ? counter : 0;
 }
 
 void ui_display_tape_current_image(int port, const char *image)
