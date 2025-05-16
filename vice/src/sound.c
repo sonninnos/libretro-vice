@@ -69,10 +69,8 @@ static void sounddev_close(const sound_device_t **dev);
 #include "libretro-core.h"
 extern unsigned int opt_warp_boost;
 extern unsigned int opt_autoloadwarp;
-extern void retro_fastforwarding(bool enabled);
 extern void sound_volume_counter_reset(void);
 extern int16_t *audio_buffer;
-extern int tape_enabled;
 extern bool retro_sound_keep_alive;
 #endif
 
@@ -1191,7 +1189,7 @@ int sound_open(void)
     fragsize = speed / ((rfsh_per_sec < 1.0) ? 1 : ((int)rfsh_per_sec))
                / fragment_divisor[fragment_size];
 #ifdef __LIBRETRO__
-    fragsize = 0;
+    fragsize = 8;
 #endif
     if (pdev) {
         if (channels <= pdev->max_channels) {
