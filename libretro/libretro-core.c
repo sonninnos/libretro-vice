@@ -78,8 +78,8 @@ unsigned int opt_audio_options_display = 0;
 unsigned int opt_mapping_options_display = 1;
 unsigned int retro_region = 0;
 float retro_refresh = 0;
-static unsigned int prev_sound_sample_rate = 0;
-static float prev_aspect_ratio = 0;
+static unsigned int sound_sample_rate_prev = 0;
+static float aspect_ratio_prev = 0;
 
 bool retro_ui_finalized = false;
 bool log_resource_set = false;
@@ -8073,8 +8073,9 @@ void update_geometry(int mode)
          system_av_info.geometry.base_height  = retroh_crop;
          system_av_info.geometry.aspect_ratio = retro_get_aspect_ratio(retrow_crop, retroh_crop, false);
 
-         if (     retrow_crop_prev == retrow_crop
-               && retroh_crop_prev == retroh_crop)
+         if (     retrow_crop_prev  == system_av_info.geometry.base_width
+               && retroh_crop_prev  == system_av_info.geometry.base_height
+               && aspect_ratio_prev == system_av_info.geometry.aspect_ratio)
             update_geometry = false;
          break;
    }
@@ -8108,8 +8109,8 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
    info->geometry.base_height  = retroh;
    info->geometry.max_width    = WINDOW_WIDTH;
    info->geometry.max_height   = WINDOW_HEIGHT;
-   info->geometry.aspect_ratio = prev_aspect_ratio = retro_get_aspect_ratio(retrow, retroh, false);
-   info->timing.sample_rate    = prev_sound_sample_rate = vice_opt.SoundSampleRate;
+   info->geometry.aspect_ratio = aspect_ratio_prev = retro_get_aspect_ratio(retrow, retroh, false);
+   info->timing.sample_rate    = sound_sample_rate_prev = vice_opt.SoundSampleRate;
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__)
    retro_refresh = (retro_region == RETRO_REGION_PAL) ? C64_PAL_RFSH_PER_SEC : C64_NTSC_RFSH_PER_SEC;
@@ -8246,9 +8247,9 @@ void retro_run(void)
          emu_model_set(request_model_set);
 
       /* Update samplerate if changed by core option */
-      if (prev_sound_sample_rate != vice_opt.SoundSampleRate)
+      if (sound_sample_rate_prev != vice_opt.SoundSampleRate)
       {
-         prev_sound_sample_rate = vice_opt.SoundSampleRate;
+         sound_sample_rate_prev = vice_opt.SoundSampleRate;
 
          /* Ensure audio rendering is reinitialized on next use */
          sound_state_changed = true;
