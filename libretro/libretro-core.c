@@ -11,6 +11,8 @@
 #include "maincpu.h"
 #include "snapshot.h"
 #include "autostart.h"
+#include "util.h"
+#include "crt.h"
 #include "drive.h"
 #include "tape.h"
 #include "tapeport.h"
@@ -104,6 +106,8 @@ int mem_ram_size = 0x20000;
 #else
 int mem_ram_size = 0;
 #endif
+
+#define GMOD2_EEPROM_SIZE 2048
 
 /* Core geometry */
 unsigned int defaultw = WINDOW_WIDTH;
@@ -1214,6 +1218,29 @@ static int process_cmdline(const char* argv)
          /* Delayed autoload via kbdbuf_feed */
          if (!noautostart)
             autoloadrun = true;
+      }
+
+      /* GMod2 cart eeprom handling to 'saves' */
+      {
+         const char *content_path = !string_is_empty(dc->files[0]) ? dc->files[0] : argv;
+         int carttype = crt_getid(content_path);
+         if (carttype == CARTRIDGE_GMOD2)
+         {
+            char eeprom_path[RETRO_PATH_MAX];
+            char content_base[RETRO_PATH_MAX];
+            strlcpy(content_base, content_path, sizeof(content_base));
+            path_remove_extension(content_base);
+            snprintf(eeprom_path, sizeof(eeprom_path), "%s%s%s.bin", retro_save_directory, ARCHDEP_DIR_SEP_STR, path_basename(content_base));
+            if (!path_is_valid(eeprom_path))
+            {
+               uint8_t blank[GMOD2_EEPROM_SIZE] = {0};
+               int ret = util_file_save(eeprom_path, blank, GMOD2_EEPROM_SIZE);
+               log_cb(RETRO_LOG_INFO, "Initialized GMod2 eeprom: \"%s\".\n", eeprom_path);
+            }
+
+            Add_Option("-gmod2eepromimage");
+            Add_Option(eeprom_path);
+         }
       }
 
       if (!is_fliplist)
