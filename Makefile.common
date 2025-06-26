@@ -312,6 +312,7 @@ SOURCES_C_C64_CART := \
 	$(EMU)/c64/cart/ltkernal.c \
 	$(EMU)/c64/cart/mach5.c \
 	$(EMU)/c64/cart/magicdesk.c \
+	$(EMU)/c64/cart/magicdesk16.c \
 	$(EMU)/c64/cart/magicformel.c \
 	$(EMU)/c64/cart/magicvoice.c \
 	$(EMU)/c64/cart/maxbasic.c \

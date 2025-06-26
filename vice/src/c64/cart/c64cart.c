@@ -104,6 +104,7 @@
 #include "ltkernal.h"
 #include "mach5.h"
 #include "magicdesk.h"
+#include "magicdesk16.h"
 #include "magicformel.h"
 #include "magicvoice.h"
 #include "maxbasic.h"
@@ -289,6 +290,7 @@ static cartridge_info_t cartlist[] = {
     { CARTRIDGE_NAME_LT_KERNAL,           CARTRIDGE_LT_KERNAL,           CARTRIDGE_GROUP_UTIL },
     { CARTRIDGE_NAME_MACH5,               CARTRIDGE_MACH5,               CARTRIDGE_GROUP_UTIL },
     { CARTRIDGE_NAME_MAGIC_DESK,          CARTRIDGE_MAGIC_DESK,          CARTRIDGE_GROUP_UTIL },
+    { CARTRIDGE_NAME_MAGIC_DESK_16,       CARTRIDGE_MAGIC_DESK_16,       CARTRIDGE_GROUP_UTIL },
     { CARTRIDGE_NAME_MAGIC_FORMEL,        CARTRIDGE_MAGIC_FORMEL,        CARTRIDGE_GROUP_FREEZER },
     { CARTRIDGE_NAME_MAGIC_VOICE,         CARTRIDGE_MAGIC_VOICE,         CARTRIDGE_GROUP_UTIL },
     { CARTRIDGE_NAME_MAX_BASIC,           CARTRIDGE_MAX_BASIC,           CARTRIDGE_GROUP_UTIL },
@@ -469,6 +471,7 @@ static int set_cartridge_type(int val, void *param)
         case CARTRIDGE_KCS_POWER:
         case CARTRIDGE_MACH5:
         case CARTRIDGE_MAGIC_DESK:
+        case CARTRIDGE_MAGIC_DESK_16:
         case CARTRIDGE_MAGIC_FORMEL:
         case CARTRIDGE_MAGIC_VOICE:
         case CARTRIDGE_MAX_BASIC:
@@ -725,6 +728,20 @@ static int crt_attach(const char *filename, uint8_t *rawcart)
 
     new_crttype = header.type;
 
+#ifdef __LIBRETRO__
+    /* Magic Desk 16 id correction hack */
+    if (new_crttype == CARTRIDGE_HYPERBASIC)
+    {
+        RFILE *fd;
+        size_t size;
+        fd = fopen(filename, MODE_READ);
+        size = archdep_file_size(fd);
+        if (size >= C64CART_ROM_LIMIT)
+            new_crttype = CARTRIDGE_MAGIC_DESK_16;
+        fclose(fd);
+    }
+#endif
+
     /* if we have loaded a C128 cartridge, convert the C128 crt id to something
        else (that can coexist with C64 crt ids) */
     if (header.machine == VICE_MACHINE_C128) {
@@ -903,6 +920,9 @@ static int crt_attach(const char *filename, uint8_t *rawcart)
                 break;
             case CARTRIDGE_MAGIC_DESK:
                 rc = magicdesk_crt_attach(fd, rawcart);
+                break;
+            case CARTRIDGE_MAGIC_DESK_16:
+                rc = magicdesk16_crt_attach(fd, rawcart);
                 break;
             case CARTRIDGE_MAGIC_FORMEL:
                 rc = magicformel_crt_attach(fd, rawcart);
