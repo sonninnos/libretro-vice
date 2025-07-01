@@ -22,12 +22,8 @@
 #ifndef SPLINE_H
 #define SPLINE_H
 
-#ifdef __LIBRETRO__
-#include "../../../sysincludes.h"
-#else
 #include <cstddef>
 #include <vector>
-#endif
 
 namespace reSIDfp
 {
@@ -42,14 +38,14 @@ namespace reSIDfp
 class Spline
 {
 public:
-    typedef struct
+    using Point = struct
     {
         double x;
         double y;
-    } Point;
+    };
 
 private:
-    typedef struct
+    using Param = struct
     {
         double x1;
         double x2;
@@ -57,9 +53,9 @@ private:
         double b;
         double c;
         double d;
-    } Param;
+    };
 
-    typedef std::vector<Param> ParamVector;
+    using ParamVector = std::vector<Param>;
 
 private:
     /// Interpolation parameters
@@ -69,7 +65,7 @@ private:
     mutable ParamVector::const_pointer c;
 
 public:
-    Spline(const Point input[], size_t inputLength);
+    Spline(const std::vector<Point> &input);
 
     /**
      * Evaluate y and its derivative at given point x.

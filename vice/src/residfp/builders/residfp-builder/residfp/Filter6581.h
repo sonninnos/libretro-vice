@@ -1,7 +1,7 @@
 /*
  * This file is part of libsidplayfp, a SID player engine.
  *
- * Copyright 2011-2019 Leandro Nini <drfiemost@users.sourceforge.net>
+ * Copyright 2011-2024 Leandro Nini <drfiemost@users.sourceforge.net>
  * Copyright 2007-2010 Antti Lankila
  * Copyright 2004,2010 Dag Lem <resid@nimrod.no>
  *
@@ -23,25 +23,16 @@
 #ifndef FILTER6581_H
 #define FILTER6581_H
 
-#ifdef __LIBRETRO__
-#include "../../../sysincludes.h"
-#endif
-#include "siddefs-fp.h"
-
-#ifdef __LIBRETRO__
-#else
-#include <memory>
-#endif
-
 #include "Filter.h"
-#include "FilterModelConfig.h"
+#include "FilterModelConfig6581.h"
+#include "Integrator6581.h"
 
 #include "sidcxx11.h"
 
 namespace reSIDfp
 {
 
-class Integrator;
+class Integrator6581;
 
 /**
  * The SID filter is modeled with a two-integrator-loop biquadratic filter,
@@ -112,9 +103,9 @@ class Integrator;
  *     |   |   v2           |    |                    |              |
  * D1  |   |   \ -------R8--o    |   +----------------+              |
  *     |   |   |   v1       |    |   |                               |
- * D0  |   |   |   \ ---R8--+    |   |    ---------------------------+
+ * D0  |   |   |   \ ---R8--+    |   |   +---------------------------+
  *     |   |   |   |             |   |   |
- *     R6  R6  R6  R6            R6  R6  R6
+ *     R6  R6  R6  R6            R6* R6* R6*
  *     |   |   |   | $18         |   |   |  $18
  *     |    \  |   | D7: 1=open   \   \   \ D6 - D4: 0=open
  *     |   |   |   |             |   |   |
@@ -149,6 +140,7 @@ class Integrator;
  *
  *     R2  ~  2.0*R1
  *     R6  ~  6.0*R1
+ *     R6* ~  1.07*R6
  *     R8  ~  8.0*R1
  *     R24 ~ 24.0*R1
  *
@@ -299,11 +291,11 @@ class Integrator;
  * 
  *             |
  *             |
- *         ||--
+ *         ||--+
  * vi -----||
- *         ||--
+ *         ||--+
  *             |
- *             |------ vo
+ *             o------ vo
  *             |     (AUDIO
  *            Rext    OUT)
  *             |
@@ -328,102 +320,49 @@ class Integrator;
 class Filter6581 final : public Filter
 {
 private:
-    const unsigned short* f0_dac;
-
-    unsigned short** mixer;
-    unsigned short** summer;
-    unsigned short** gain;
-
-    const int voiceScaleS14;
-    const int voiceDC;
-
     /// VCR + associated capacitor connected to highpass output.
-    std::unique_ptr<Integrator> const hpIntegrator;
+    Integrator6581 hpIntegrator;
 
     /// VCR + associated capacitor connected to bandpass output.
-    std::unique_ptr<Integrator> const bpIntegrator;
+    Integrator6581 bpIntegrator;
+
+    const unsigned short* f0_dac;
 
 protected:
     /**
      * Set filter cutoff frequency.
      */
-    void updatedCenterFrequency() override;
+    void updateCenterFrequency() override;
 
-    /**
-     * Set filter resonance.
-     *
-     * In the MOS 6581, 1/Q is controlled linearly by res.
-     */
-    void updateResonance(unsigned char res) override { currentResonance = gain[~res & 0xf]; }
-
-    void updatedMixing() override;
+    int solveIntegrators() override;
 
 public:
     Filter6581() :
-        f0_dac(FilterModelConfig::getInstance()->getDAC(0.5)),
-        mixer(FilterModelConfig::getInstance()->getMixer()),
-        summer(FilterModelConfig::getInstance()->getSummer()),
-        gain(FilterModelConfig::getInstance()->getGain()),
-        voiceScaleS14(FilterModelConfig::getInstance()->getVoiceScaleS14()),
-        voiceDC(FilterModelConfig::getInstance()->getVoiceDC()),
-        hpIntegrator(FilterModelConfig::getInstance()->buildIntegrator()),
-        bpIntegrator(FilterModelConfig::getInstance()->buildIntegrator())
-    {
-        input(0);
-    }
+        Filter(*FilterModelConfig6581::getInstance()),
+        hpIntegrator(*FilterModelConfig6581::getInstance()),
+        bpIntegrator(*FilterModelConfig6581::getInstance()),
+        f0_dac(FilterModelConfig6581::getInstance()->getDAC(0.5))
+    {}
 
-    ~Filter6581();
-
-    unsigned short clock(int voice1, int voice2, int voice3) override;
-
-    void input(int sample) override { ve = (sample * voiceScaleS14 * 3 >> 10) + mixer[0][0]; }
+    ~Filter6581() override;
 
     /**
      * Set filter curve type based on single parameter.
      *
-     * @param curvePosition 0 .. 1, where 0 sets center frequency high ("light") and 1 sets it low ("dark"), default is 0.5
+     * @param curvePosition 0 .. 1, where 0 sets center frequency high ("bright") and 1 sets it low ("dark").
+     *                      Default is 0.5
      */
     void setFilterCurve(double curvePosition);
+
+    /**
+     * Set filter offset and range based on single parameter.
+     *
+     * @param adjustment 0 .. 1, where 0 sets center frequency low ("dark"), 1 sets it high ("bright").
+     *                   This also affects the range. Default is 0.5
+     */
+    void setFilterRange(double adjustment);
 };
 
 } // namespace reSIDfp
-
-#if RESID_INLINING || defined(FILTER6581_CPP)
-
-#include "Integrator.h"
-
-namespace reSIDfp
-{
-
-RESID_INLINE
-unsigned short Filter6581::clock(int voice1, int voice2, int voice3)
-{
-    voice1 = (voice1 * voiceScaleS14 >> 18) + voiceDC;
-    voice2 = (voice2 * voiceScaleS14 >> 18) + voiceDC;
-    // Voice 3 is silenced by voice3off if it is not routed through the filter.
-    voice3 = (filt3 || !voice3off) ? (voice3 * voiceScaleS14 >> 18) + voiceDC : 0;
-
-    int Vi = 0;
-    int Vo = 0;
-
-    (filt1 ? Vi : Vo) += voice1;
-    (filt2 ? Vi : Vo) += voice2;
-    (filt3 ? Vi : Vo) += voice3;
-    (filtE ? Vi : Vo) += ve;
-
-    Vhp = currentSummer[currentResonance[Vbp] + Vlp + Vi];
-    Vbp = hpIntegrator->solve(Vhp);
-    Vlp = bpIntegrator->solve(Vbp);
-
-    if (lp) Vo += Vlp;
-    if (bp) Vo += Vbp;
-    if (hp) Vo += Vhp;
-
-    return currentGain[currentMixer[Vo]];
-}
-
-} // namespace reSIDfp
-
-#endif
 
 #endif

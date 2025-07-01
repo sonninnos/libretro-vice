@@ -1,7 +1,7 @@
 /*
  * This file is part of libsidplayfp, a SID player engine.
  *
- * Copyright 2011-2016 Leandro Nini <drfiemost@users.sourceforge.net>
+ * Copyright 2011-2025 Leandro Nini <drfiemost@users.sourceforge.net>
  * Copyright 2007-2010 Antti Lankila
  * Copyright 2004,2010 Dag Lem <resid@nimrod.no>
  *
@@ -22,8 +22,13 @@
 
 #include "Dac.h"
 
+#include "sidcxx11.h"
+
 namespace reSIDfp
 {
+
+constexpr double MOSFET_LEAKAGE_6581 = 0.0075;
+constexpr double MOSFET_LEAKAGE_8580 = 0.0035;
 
 Dac::Dac(unsigned int bits) :
     dac(new double[bits]),
@@ -35,30 +40,48 @@ Dac::~Dac()
     delete [] dac;
 }
 
-double Dac::getOutput(unsigned int input) const
+double Dac::getOutput(unsigned int input, bool saturate) const
 {
     double dacValue = 0.;
 
     for (unsigned int i = 0; i < dacLength; i++)
     {
-        if ((input & (1 << i)) != 0)
-        {
-            dacValue += dac[i];
-        }
+        const bool transistor_on = (input & (1 << i)) != 0;
+        dacValue += transistor_on ? dac[i] : dac[i] * leakage;
     }
 
+    /*
+     * Rough attempt at modeling the MDAC saturation for the 6581.
+     * Things are actually more complex, the saturation is likely
+     * caused by the two NMOS source followers, one at the output
+     * of the waveform DAC and the second at the output of the MDAC.
+     * The buffers are also supposed to introduce a DC offset.
+     * As a first step we use a cubic model for saturation and
+     * apply it only at the waveform output, providing a decent
+     * result without any runtime overhead.
+     */
+    if (saturate)
+    {
+        static constexpr double GAIN = 1.1;
+        static constexpr double SAT = 1.1;
+        dacValue = GAIN*dacValue + (1. - GAIN)*SAT*dacValue*dacValue*dacValue;
+    }
     return dacValue;
 }
 
 void Dac::kinkedDac(ChipModel chipModel)
 {
-    const double R_INFINITY = 1e6;
+    constexpr double R_INFINITY = 1e6;
 
     // Non-linearity parameter, 8580 DACs are perfectly linear
     const double _2R_div_R = chipModel == MOS6581 ? 2.20 : 2.00;
 
     // 6581 DACs are not terminated by a 2R resistor
     const bool term = chipModel == MOS8580;
+
+    leakage = chipModel == MOS6581 ? MOSFET_LEAKAGE_6581 : MOSFET_LEAKAGE_8580;
+
+    double Vsum = 0.;
 
     // Calculate voltage contribution by each individual bit in the R-2R ladder.
     for (unsigned int set_bit = 0; set_bit < dacLength; set_bit++)
@@ -76,7 +99,7 @@ void Dac::kinkedDac(ChipModel chipModel)
         {
             Rn = (Rn == R_INFINITY) ?
                  R + _2R :
-                 R + _2R * Rn / (_2R + Rn); // R + 2R || Rn
+                 R + (_2R * Rn) / (_2R + Rn); // R + 2R || Rn
         }
 
         // Source transformation for bit voltage.
@@ -86,7 +109,7 @@ void Dac::kinkedDac(ChipModel chipModel)
         }
         else
         {
-            Rn = _2R * Rn / (_2R + Rn); // 2R || Rn
+            Rn = (_2R * Rn) / (_2R + Rn); // 2R || Rn
             Vn = Vn * Rn / _2R;
         }
 
@@ -97,23 +120,15 @@ void Dac::kinkedDac(ChipModel chipModel)
         {
             Rn += R;
             const double I = Vn / Rn;
-            Rn = _2R * Rn / (_2R + Rn); // 2R || Rn
+            Rn = (_2R * Rn) / (_2R + Rn); // 2R || Rn
             Vn = Rn * I;
         }
 
         dac[set_bit] = Vn;
+        Vsum += Vn;
     }
 
     // Normalize to integerish behavior
-    double Vsum = 0.;
-
-    for (unsigned int i = 0; i < dacLength; i++)
-    {
-        Vsum += dac[i];
-    }
-
-    Vsum /= 1 << dacLength;
-
     for (unsigned int i = 0; i < dacLength; i++)
     {
         dac[i] /= Vsum;

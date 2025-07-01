@@ -10,19 +10,25 @@
 #include <cstddef>
 #include <cstring>
 #include <iostream>
+#include <sstream>
 #include <limits>
 #include <map>
 #include <memory>
+#include <stdint.h>
+#include <string>
+#include <vector>
 #ifdef HAVE_MMINTRIN_H
 #  include <mmintrin.h>
 #endif
+#endif
+
 #ifdef __QNX__
 #include <math.h>
 #include <string.h>
 #endif
-#include <stdint.h>
-#include <sstream>
-#include <string>
-#include <vector>
+
+#ifdef __PS3__
+#include "PS3_include.h"
 #endif
+
 #endif
