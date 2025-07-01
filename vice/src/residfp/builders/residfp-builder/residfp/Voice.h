@@ -1,7 +1,7 @@
 /*
  * This file is part of libsidplayfp, a SID player engine.
  *
- * Copyright 2011-2015 Leandro Nini <drfiemost@users.sourceforge.net>
+ * Copyright 2011-2025 Leandro Nini <drfiemost@users.sourceforge.net>
  * Copyright 2007-2010 Antti Lankila
  * Copyright 2004 Dag Lem <resid@nimrod.no>
  *
@@ -23,17 +23,9 @@
 #ifndef VOICE_H
 #define VOICE_H
 
-#ifdef __LIBRETRO__
-#include "../../../sysincludes.h"
-#else
-#include <memory>
-#endif
-
 #include "siddefs-fp.h"
 #include "WaveformGenerator.h"
 #include "EnvelopeGenerator.h"
-
-#include "sidcxx11.h"
 
 namespace reSIDfp
 {
@@ -44,41 +36,71 @@ namespace reSIDfp
 class Voice
 {
 private:
-    std::unique_ptr<WaveformGenerator> const waveformGenerator;
+    WaveformGenerator waveformGenerator;
 
-    std::unique_ptr<EnvelopeGenerator> const envelopeGenerator;
+    EnvelopeGenerator envelopeGenerator;
+
+    /// The DAC LUT for analog waveform output
+    float* wavDAC; //-V730_NOINIT this is initialized in the SID constructor
+
+    /// The DAC LUT for analog envelope output
+    float* envDAC; //-V730_NOINIT this is initialized in the SID constructor
 
 public:
     /**
      * Amplitude modulated waveform output.
      *
-     * The waveform DAC generates a voltage between 5 and 12 V corresponding
-     * to oscillator state 0 .. 4095.
+     * The waveform DAC generates a voltage between virtual ground and Vdd
+     * (5-12 V for the 6581 and 4.75-9 V for the 8580)
+     * corresponding to oscillator state 0 .. 4095.
      *
      * The envelope DAC generates a voltage between waveform gen output and
-     * the 5V level, corresponding to envelope state 0 .. 255.
+     * the virtual ground level, corresponding to envelope state 0 .. 255.
      *
      * Ideal range [-2048*255, 2047*255].
      *
-     * @param ringModulator Ring-modulator for waveform
-     * @return waveformgenerator output
+     * @return the voice analog output
      */
     RESID_INLINE
-    int output(const WaveformGenerator* ringModulator) const
+    float output()
     {
-        return static_cast<int>(waveformGenerator->output(ringModulator) * envelopeGenerator->output());
+        unsigned int const wav = waveformGenerator.output();
+        unsigned int const env = envelopeGenerator.output();
+
+        // DAC imperfections are emulated by using the digital output
+        // as an index into a DAC lookup table.
+        return wavDAC[wav] * envDAC[env];
     }
 
     /**
-     * Constructor.
+     * Set the analog DAC emulation for waveform generator.
+     * Must be called before any operation.
+     *
+     * @param dac
      */
-    Voice() :
-        waveformGenerator(new WaveformGenerator()),
-        envelopeGenerator(new EnvelopeGenerator()) {}
+    void setWavDAC(float* dac) { wavDAC = dac; }
 
-    WaveformGenerator* wave() const { return waveformGenerator.get(); }
+    /**
+     * Set the analog DAC emulation for envelope.
+     * Must be called before any operation.
+     *
+     * @param dac
+     */
+    void setEnvDAC(float* dac) { envDAC = dac; }
 
-    EnvelopeGenerator* envelope() const { return envelopeGenerator.get(); }
+    /**
+     * Set the modulator voice.
+     *
+     * @param modulator Ring-modulator for waveform
+     */
+    void setOtherVoices(Voice& prev, Voice& next)
+    {
+        waveformGenerator.setOtherWaveforms(prev.wave(), next.wave());
+    }
+
+    WaveformGenerator* wave() { return &waveformGenerator; }
+
+    EnvelopeGenerator* envelope() { return &envelopeGenerator; }
 
     /**
      * Write control register.
@@ -87,8 +109,8 @@ public:
      */
     void writeCONTROL_REG(unsigned char control)
     {
-        waveformGenerator->writeCONTROL_REG(control);
-        envelopeGenerator->writeCONTROL_REG(control);
+        waveformGenerator.writeCONTROL_REG(control);
+        envelopeGenerator.writeCONTROL_REG(control);
     }
 
     /**
@@ -96,8 +118,8 @@ public:
      */
     void reset()
     {
-        waveformGenerator->reset();
-        envelopeGenerator->reset();
+        waveformGenerator.reset();
+        envelopeGenerator.reset();
     }
 };
 

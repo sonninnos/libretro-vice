@@ -1,7 +1,7 @@
 /*
  * This file is part of libsidplayfp, a SID player engine.
  *
- * Copyright 2011-2015 Leandro Nini <drfiemost@users.sourceforge.net>
+ * Copyright 2011-2024 Leandro Nini <drfiemost@users.sourceforge.net>
  * Copyright 2007-2010 Antti Lankila
  * Copyright 2004,2010 Dag Lem
  *
@@ -23,11 +23,7 @@
 #ifndef OPAMP_H
 #define OPAMP_H
 
-#ifdef __LIBRETRO__
-#include "../../../sysincludes.h"
-#else
-#include <memory>
-#endif
+#include <vector>
 
 #include "Spline.h"
 
@@ -40,9 +36,9 @@ namespace reSIDfp
  * Find output voltage in inverting gain and inverting summer SID op-amp
  * circuits, using a combination of Newton-Raphson and bisection.
  *
- *                ---R2--
+ *               +---R2--+
  *               |       |
- *     vi ---R1-----[A>----- vo
+ *     vi ---R1--o--[A>--o-- vo
  *               vx
  *
  * From Kirchoff's current law it follows that
@@ -53,6 +49,8 @@ namespace reSIDfp
  * for the currents, we get:
  *
  *     n*((Vddt - vx)^2 - (Vddt - vi)^2) + (Vddt - vx)^2 - (Vddt - vo)^2 = 0
+ * 
+ * where n is the ratio between R1 and R2.
  *
  * Our root function f can thus be written as:
  *
@@ -73,29 +71,34 @@ class OpAmp
 {
 private:
     /// Current root position (cached as guess to speed up next iteration)
-    mutable double x;
+    mutable double x = 0.;
 
-    const double kVddt;
+    const double Vddt;
     const double vmin;
     const double vmax;
 
-    std::unique_ptr<Spline> const opamp;
+    Spline opamp;
 
 public:
     /**
      * Opamp input -> output voltage conversion
      *
      * @param opamp opamp mapping table as pairs of points (in -> out)
-     * @param opamplength length of the opamp array
-     * @param kVddt transistor dt parameter (in volts)
+     * @param Vddt transistor dt parameter (in volts)
+     * @param vmin
+     * @param vmax
      */
-    OpAmp(const Spline::Point opamp[], int opamplength, double kVddt) :
-        x(0.),
-        kVddt(kVddt),
-        vmin(opamp[0].x),
-        vmax(opamp[opamplength - 1].x),
-        opamp(new Spline(opamp, opamplength)) {}
+    OpAmp(const std::vector<Spline::Point> &opamp_voltages, double Vddt,
+            double vmin, double vmax
+    ) :
+        Vddt(Vddt),
+        vmin(vmin),
+        vmax(vmax),
+        opamp(opamp_voltages) {}
 
+    /**
+     * Reset root position
+     */
     void reset() const
     {
         x = vmin;
@@ -105,8 +108,8 @@ public:
      * Solve the opamp equation for input vi in loading context n
      *
      * @param n the ratio of input/output loading
-     * @param vi input
-     * @return vo
+     * @param vi input voltage
+     * @return vo output voltage
      */
     double solve(double n, double vi) const;
 };
