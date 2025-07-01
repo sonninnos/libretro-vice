@@ -36,7 +36,7 @@ namespace reSIDfp
  *         |   |       |   |   |      |   Termination
  *        2R  2R      2R  2R  2R     2R   only for
  *         |   |       |   |   |      |   MOS 8580
- *     Vo  --R---R--...--R---R--    ---
+ *     Vo -o-R-o-R-...-o-R-o-R--    --+
  *
  *
  * All MOS 6581 DACs are missing a termination resistor at bit 0. This causes
@@ -75,6 +75,15 @@ namespace reSIDfp
 class Dac
 {
 private:
+    /**
+     * DAC leakage
+     *
+     * "Even in standard transistors a small amount of current leaks even when they are technically switched off."
+     *
+     * https://en.wikipedia.org/wiki/Subthreshold_conduction
+     */
+    double leakage;
+
     /// analog values
     double * const dac;
 
@@ -103,7 +112,7 @@ public:
      * @param input the digital input
      * @return the analog output value
      */
-    double getOutput(unsigned int input) const;
+    double getOutput(unsigned int input, bool saturate=false) const;
 };
 
 } // namespace reSIDfp
