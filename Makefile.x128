@@ -56,8 +56,10 @@ SOURCES_CXX += \
     $(EMU)/residfp/builders/residfp-builder/residfp/Filter6581.cpp \
     $(EMU)/residfp/builders/residfp-builder/residfp/Filter8580.cpp \
     $(EMU)/residfp/builders/residfp-builder/residfp/FilterModelConfig.cpp \
+    $(EMU)/residfp/builders/residfp-builder/residfp/FilterModelConfig6581.cpp \
     $(EMU)/residfp/builders/residfp-builder/residfp/FilterModelConfig8580.cpp \
     $(EMU)/residfp/builders/residfp-builder/residfp/Integrator.cpp \
+    $(EMU)/residfp/builders/residfp-builder/residfp/Integrator6581.cpp \
     $(EMU)/residfp/builders/residfp-builder/residfp/Integrator8580.cpp \
     $(EMU)/residfp/builders/residfp-builder/residfp/OpAmp.cpp \
     $(EMU)/residfp/builders/residfp-builder/residfp/resample/SincResampler.cpp \

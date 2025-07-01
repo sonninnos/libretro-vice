@@ -1,7 +1,7 @@
 /*
  * This file is part of libsidplayfp, a SID player engine.
  *
- * Copyright 2011-2019 Leandro Nini <drfiemost@users.sourceforge.net>
+ * Copyright 2011-2024 Leandro Nini <drfiemost@users.sourceforge.net>
  * Copyright 2007-2010 Antti Lankila
  * Copyright 2004,2010 Dag Lem <resid@nimrod.no>
  *
@@ -20,14 +20,25 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#define FILTER8580_CPP
-
 #include "Filter8580.h"
 
 #include "Integrator8580.h"
 
 namespace reSIDfp
 {
+
+int Filter8580::solveIntegrators()
+{
+    Vbp = hpIntegrator.solve(Vhp);
+    Vlp = bpIntegrator.solve(Vbp);
+
+    int Vfilt = 0;
+    if (lp) Vfilt += Vlp;
+    if (bp) Vfilt += Vbp;
+    if (hp) Vfilt += Vhp;
+
+    return Vfilt;
+}
 
 /**
  * W/L ratio of frequency DAC bit 0,
@@ -37,22 +48,22 @@ namespace reSIDfp
  */
 const double DAC_WL0 = 0.00615;
 
-Filter8580::~Filter8580() {}
+Filter8580::~Filter8580() = default;
 
-void Filter8580::updatedCenterFrequency()
+void Filter8580::updateCenterFrequency()
 {
     double wl;
     double dacWL = DAC_WL0;
-    if (fc)
+    if (getFC())
     {
         wl = 0.;
         for (unsigned int i = 0; i < 11; i++)
         {
-            if (fc & (1 << i))
+            if (getFC() & (1 << i))
             {
                 wl += dacWL;
             }
-            dacWL *= 2;
+            dacWL *= 2.;
         }
     }
     else
@@ -60,32 +71,8 @@ void Filter8580::updatedCenterFrequency()
         wl = dacWL/2.;
     }
 
-    hpIntegrator->setFc(wl);
-    bpIntegrator->setFc(wl);
-}
-
-void Filter8580::updatedMixing()
-{
-    currentGain = gain_vol[vol];
-
-    unsigned int ni = 0;
-    unsigned int no = 0;
-
-    (filt1 ? ni : no)++;
-    (filt2 ? ni : no)++;
-
-    if (filt3) ni++;
-    else if (!voice3off) no++;
-
-    (filtE ? ni : no)++;
-
-    currentSummer = summer[ni];
-
-    if (lp) no++;
-    if (bp) no++;
-    if (hp) no++;
-
-    currentMixer = mixer[no];
+    hpIntegrator.setFc(wl);
+    bpIntegrator.setFc(wl);
 }
 
 void Filter8580::setFilterCurve(double curvePosition)
@@ -94,8 +81,8 @@ void Filter8580::setFilterCurve(double curvePosition)
     // 1.2 <= cp <= 1.8
     cp = 1.8 - curvePosition * 3./5.;
 
-    hpIntegrator->setV(cp);
-    bpIntegrator->setV(cp);
+    hpIntegrator.setV(cp);
+    bpIntegrator.setV(cp);
 }
 
 } // namespace reSIDfp
