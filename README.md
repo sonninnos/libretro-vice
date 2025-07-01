@@ -552,3 +552,16 @@ ndk-build
 It is based on MNIB which is copyrighted
 (C) 2000 Markus Brenner
 
+## libsidplayfp
+
+https://github.com/libsidplayfp/libsidplayfp
+
+libsidplayfp is a C64 music player library which integrates
+the reSID SID chip emulation into a cycle-based emulator
+environment, constantly aiming to improve emulation of the
+C64 system and the SID chips.
+
+Copyright (c) 2000-2001 Simon White
+Copyright (c) 2007-2010 Antti Lankila
+Copyright (c) 2010-2023 Leandro Nini <drfiemost@users.sourceforge.net>
+

@@ -1,3 +1,214 @@
+2.14.0 2025-05-11
+* Rough approximation of MDAC saturation for the 6581 (#177) (#185)
+* New play API for client side mixing (#41) (#184)
+* Minor fixes and optimizations
+
+
+
+2.13.1 2025-04-25
+* Fix build with inlining disabled (#181)
+* Add missing files to the tarball (#182)
+* Update exsid driver
+* Fixed an uninitialized warning
+
+
+
+2.13.0 2025-04-13
+* Add support for c++23 where available
+* Reworked power on delay (#82)
+* Correctly link to pthread library (#179)
+* Add proper compiler flag when enabling sse4 (#172)
+* resid/residfp: Use more bits for the 8580 filter cutoff (VICE bug 2098)
+* resid: reduce aliasing noise (VICE bug 2116)
+
+
+
+2.12.0 2024-12-01
+* Better mixing for multi chip tunes (#167)
+* residfp: fixed voice sync when a saw-combined waveform is selected (#169)
+* residfp: updated CW parameters
+* resid: properly adjusted 8580 Vref value
+* switched to UTPP for unit tests (#170)
+
+
+
+2.11.0 2024-11-03
+* Remove buffer size limit from mixer (fixes #159)
+* residfp: avoid quantization noise (#156)
+* residfp: implemented 6581 DC drift (#155)
+* residfp: properly adjusted 8580 Vref value
+
+
+
+2.10.1 2024-10-20
+* residfp: fix digiboost (#157)
+* residfp: fix combined waveforms (#160)
+
+
+
+2.10.0 2024-10-06
+* Add support for c++20 where available
+* residfp: retuned cw parameters after measuring waves RMS (#143)
+* residfp: code refactoring and minor performance optimizations (#145)
+* resid/residfp: scale down filter inputs in the mixer for 6581 (#139)
+* Centralized handling of muted voices and allow muting samples (#136)
+* new API to toggle the filter and deprecated sidplayfp::filter
+
+
+
+2.9.0 2024-08-12
+* residfp: use c++11 threads for building filter tables (#92)
+* residfp: code modernization and minor performance optimizations
+* Performance optimizations (#133, #137)
+
+
+
+2.8.0 2024-06-09
+* Optimized event scheduler (#131)
+* Stop pretendig we support pre-c++11 compilers (#130)
+* Fixed thread unsafety for psid_driver (#132)
+* residfp: do not cache resampling tables (#91)
+* resid/residfp: tuned oscillator leakage
+
+
+
+2.7.1 2024-05-19
+* Sync resid with upstream
+* Make strong CWs the default (#127)
+* Downtune the leakage parameter a bit (#126)
+* Fix UBSan complaint abount uninitialized var 'is6581'
+
+
+
+2.7.0 2024-03-29
+* residfp: refactor residfp filter (#109)
+* residfp: added ability to adjust the uCox parameter at runtime (#101)
+* residfp: allow setting the combined waveforms strength (#110)
+* resid/residfp: emulate oscillator leakage (#102)
+
+
+
+2.6.0 2024-01-01
+* residfp is now thread-safe (#71)
+* residfp: fixed SSE2 version of convolve (#105)
+* residfp: updated combined waveforms model (#97)
+* residfp: amplify the output by a model dependent scale factor (#78, #79)
+* a couple of autotools fixes (#103, #104, #108)
+
+
+
+2.5.1 2023-12-23
+* Check for {g,}od at configure time (#87)
+* residfp: fix a 6581 filter bug where values could actually go negative
+* Sync resid with upstream
+
+
+
+2.5.0 2023-06-02
+* residfp: reworked the combined waveforms model by separating pulldown effect from waveform generation
+* residfp: tweaked the 8580 filter parameters for increased volume and less distortion (#45)
+* Updated to latest resid
+* Use OpenMP to speedup LUTs initialization
+* CIA: minor rework based on chip reverse engineering
+* Use c++17 where available
+* Added sanity check for buffer size
+* Minor mixer optimizations
+* Other minor changes
+
+
+
+2.4.2 2023-01-29
+* Fixed a memory leak
+* Minor fixes
+
+
+
+2.4.1 2022-11-19
+* Fixed a memory leak introduced in 2.1.0
+
+
+
+2.4.0 2022-11-06
+* Use pkgconfig for UnitTest++ and libgcrypt support (#46)
+* residfp: correct 6581 volume gain based on schematics (issue #38)
+* residfp: fixed more PVS-Studio warnings. (issue #49)
+* residfp: refactoring, changes and cleanup
+* residfp: updated the combined waveform model
+* Synced resid with upstream
+* Fixed a comparison-with-wider-type alert in the MUS loader
+* Other minor changes
+
+
+
+2.3.1 2021-12-07
+* VIC II: check badline enabled condition on raster Y increment. Fixes CPU/shxy/shx-test
+* Disable digiboost for residfp when not required (issue #37)
+
+
+
+2.3.0 2021-09-16
+* residfp: fixed some PVS-Studio warnings. (issues #20 #21 #23 #28)
+* residfp: share dac tables between voices, saves a few Kb and some initialization time (issues #34 #26)
+* CIA: rework interrupt implementation based on Denise emu code, fixes CIA/dd0dtest/dd0dtest (issue #29)
+* c64: return pseudo random numbers when reading from the I/O Area as the VIC fetches are not emulated.
+       Fixes C64/openio/gauntlet test
+* VIC-II: fix lightpen X coordinate calculation. Makes VICII/split-tests/lightpen/lightpen test pass
+
+
+
+2.2.2 2021-08-07
+* songlengthdb: fix possible corrupted data (issue #32)
+
+
+
+2.2.1 2021-07-18
+* VIC-II: fix NTSC badline timing and improve cycle skipping
+* CIA: minor refactoring
+* Fixed a few minor PVS-Studio flagged issues
+
+
+
+2.2.0 2021-05-23
+* reSIDfp: added NEON (by Christopher Snowhill) and SSE2 version of convolution function
+  the configure option has been changed to --with-simd=<sse2/mmx/neon/none>
+* Exposed last values written to the SID registers. Based on patch by Stian Skjelstad
+* API additions:
+  - Splitted ROM functions
+  - Added CIA 6526 4485 model setting, mostly for testing
+  - Added function for loading database from unicode path on Windows
+  - Added function for loading tunes using a custom loader callback
+
+
+
+2.1.2 2021-04-19
+* configure: don't fail when --with-exsid is passed and libexsid is installed (issue #13)
+* songlength DB: fix parsing of milliseconds with leading zeroes
+
+
+
+2.1.1 2021-02-27
+* Fixed building hardsid support
+* reSIDfp: shift register regression fixes
+* Updated RAM init pattern similar to how it's done in VICE
+
+
+
+2.1.0 2021-02-11
+* Do not use smart pointers in public headers [bugs:#38]
+* Updated to exSID-driver v2.1
+* Fixed static builds with external exSID libs
+* Trimmed down relocator code to the bare minimum required
+* resid/residfp:
+  - use soft instead of hard clipping
+  - rough implementation of bitfade
+* residfp:
+  - better bandpass frequency calculation
+  - updated 8580 resistor ratios based on schematics and adjusted voltage range
+  - updated TTL values
+  - assume a high impedance audio amplifier yielding an 1.6Hz high-pass
+
+
+
 2.0.5 2020-10-24
 * Fixed CIA SDR handling, code borrowed from Denise emulator
 * Fixed external filter coefficients calculation in resid/residfp

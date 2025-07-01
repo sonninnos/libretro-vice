@@ -138,10 +138,7 @@ static int residfp_init(sound_t *psid, int speed, int cycles_per_sec, int factor
 
     try
     {
-        // from residfp-emu.cpp: Round half frequency to the nearest multiple of 5000
-        const int halfFreq = 5000*((static_cast<int>(speed)+5000)/10000);
-        psid->sid->setSamplingParameters(cycles_per_sec, method,
-            speed, std::min(halfFreq, 20000));
+        psid->sid->setSamplingParameters(cycles_per_sec, method, speed);
     }
     catch (const SIDError &e)
     {

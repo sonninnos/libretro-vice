@@ -434,7 +434,7 @@ OBJECTS     := $(addprefix $(OBJDIR)/,$(OBJECTS))
 # Do not enforce C99 as some gcc-versions appear to not handle system-headers
 # properly in that case.
 #CFLAGS      += -std=c99
-CXXFLAGS    += -std=c++98
+CXXFLAGS    += -std=c++11 -DHAVE_CXX11
 
 ifeq ($(platform), theos_ios)
 	COMMON_FLAGS := -DIOS -DARM $(COMMON_DEFINES) $(INCFLAGS) -I$(THEOS_INCLUDE_PATH) -Wno-error
