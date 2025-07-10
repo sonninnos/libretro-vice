@@ -461,7 +461,7 @@ static bool reu_allow(const char *string)
    {
       if (vice_opt.REUsize)
       {
-         log_cb(RETRO_LOG_INFO, "REU is not compatible with cartridges, disabling..\n");
+         log_cb(RETRO_LOG_INFO, "REU is not compatible with cartridges, disabling...\n");
          if (retro_ui_finalized)
             log_resources_set_int("REU", 0);
       }
@@ -587,7 +587,7 @@ static void vic20_mem_force(const char* argv)
       if (strcasestr(argv, buf))
       {
          vic20mem_forced = i;
-         log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in filename '%s': %dkB\n", argv, vic20mem);
+         log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in filename \"%s\": %dkB\n", argv, vic20mem);
          break;
       }
 
@@ -595,7 +595,7 @@ static void vic20_mem_force(const char* argv)
       if (strcasestr(argv, buf))
       {
          vic20mem_forced = i;
-         log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in filename '%s': %dkB\n", argv, vic20mem);
+         log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in filename \"%s\": %dkB\n", argv, vic20mem);
          break;
       }
 
@@ -603,7 +603,7 @@ static void vic20_mem_force(const char* argv)
       if (strcasestr(argv, buf))
       {
          vic20mem_forced = i;
-         log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in path '%s': %dkB\n", argv, vic20mem);
+         log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in path \"%s\": %dkB\n", argv, vic20mem);
          break;
       }
    }
@@ -678,7 +678,7 @@ static void vic20_autosys_run(const char* full_path)
       else if (strcasestr(full_path, "[SYS"))
          token = strtok((char*)command, "]");
 
-      log_cb(RETRO_LOG_INFO, "Executing 'SYS %s'\n", command);
+      log_cb(RETRO_LOG_INFO, "Executing \"SYS %s\"\n", command);
       kbdbuf_feed("SYS ");
       kbdbuf_feed(command);
       kbdbuf_feed("\r");
@@ -711,12 +711,12 @@ static int process_cmdline(const char* argv)
    {
       if (loadcmdfile(argv))
       {
-         log_cb(RETRO_LOG_INFO, "Starting game from command line '%s'\n", argv);
+         log_cb(RETRO_LOG_INFO, "Starting game from command line \"%s\".\n", argv);
          vice_opt.Model = 99; /* set model to unknown for custom settings - prevents overriding of command line options */
       }
       else
       {
-         log_cb(RETRO_LOG_ERROR, "Failed to load command line from '%s'\n", argv);
+         log_cb(RETRO_LOG_ERROR, "Failed to load command line from \"%s\".\n", argv);
       }
       parse_cmdline(CMDFILE);
    }
@@ -1517,16 +1517,16 @@ void update_work_disk(void)
                   charset_petconvstring((uint8_t *)format_name, 0);
 
                   if (vdrive_internal_create_format_disk_image(work_disk_filepath, format_name, work_disk_type))
-                     log_cb(RETRO_LOG_INFO, "Work disk creation failed: '%s'\n", work_disk_filepath);
+                     log_cb(RETRO_LOG_INFO, "Work disk creation failed: \"%s\"\n", work_disk_filepath);
                   else
-                     log_cb(RETRO_LOG_INFO, "Work disk created: '%s'\n", work_disk_filepath);
+                     log_cb(RETRO_LOG_INFO, "Work disk created: \"%s\"\n", work_disk_filepath);
                }
                break;
             case DISK_IMAGE_TYPE_FS:
                if (path_mkdir(work_disk_filepath))
-                  log_cb(RETRO_LOG_INFO, "Work directory creation failed: '%s'\n", work_disk_filepath);
+                  log_cb(RETRO_LOG_INFO, "Work directory creation failed: \"%s\"\n", work_disk_filepath);
                else
-                  log_cb(RETRO_LOG_INFO, "Work directory created: '%s'\n", work_disk_filepath);
+                  log_cb(RETRO_LOG_INFO, "Work directory created: \"%s\"\n", work_disk_filepath);
                break;
          }
       }
@@ -1565,7 +1565,7 @@ void update_work_disk(void)
                   log_resources_set_int("Drive9Type", work_disk_type);
                file_system_attach_disk(work_disk_unit, 0, work_disk_filepath);
                autodetect_drivetype(work_disk_unit);
-               log_cb(RETRO_LOG_INFO, "Work disk '%s' attached to drive #%d\n", work_disk_filepath, work_disk_unit);
+               log_cb(RETRO_LOG_INFO, "Work disk \"%s\" attached to drive #%d.\n", work_disk_filepath, work_disk_unit);
                break;
             case DISK_IMAGE_TYPE_FS:
                switch (work_disk_unit)
@@ -1582,7 +1582,7 @@ void update_work_disk(void)
                      log_resources_set_string("FSDevice9Dir", work_disk_filepath);
                      break;
                }
-               log_cb(RETRO_LOG_INFO, "Work directory '%s' attached to drive #%d\n", work_disk_filepath, work_disk_unit);
+               log_cb(RETRO_LOG_INFO, "Work directory \"%s\" attached to drive #%d.\n", work_disk_filepath, work_disk_unit);
                break;
          }
 
@@ -1597,7 +1597,7 @@ void update_work_disk(void)
       {
          if (string_is_empty(full_path) || (!string_is_empty(full_path) && !strstr(full_path, work_disk_filename)))
          {
-            log_cb(RETRO_LOG_INFO, "Work disk '%s' detached from drive #%d\n", attached_image, 8);
+            log_cb(RETRO_LOG_INFO, "Work disk \"%s\" detached from drive #%d.\n", attached_image, 8);
             file_system_detach_disk(8, 0);
             log_resources_set_int("Drive8Type", DRIVE_TYPE_DEFAULT);
             if (string_is_empty(full_path))
@@ -1609,7 +1609,7 @@ void update_work_disk(void)
       {
          if (string_is_empty(full_path) || (!string_is_empty(full_path) && !strstr(full_path, work_disk_filename)))
          {
-            log_cb(RETRO_LOG_INFO, "Work directory '%s' detached from drive #%d\n", attached_image, 8);
+            log_cb(RETRO_LOG_INFO, "Work directory \"%s\" detached from drive #%d.\n", attached_image, 8);
             log_resources_set_int("IECDevice8", 0);
             log_resources_set_int("FileSystemDevice8", 0);
             if (string_is_empty(full_path))
@@ -1619,7 +1619,7 @@ void update_work_disk(void)
 
       if ((attached_image = file_system_get_disk_name(9, 0)) != NULL && strstr(attached_image, work_disk_basename))
       {
-         log_cb(RETRO_LOG_INFO, "Work disk '%s' detached from drive #%d\n", attached_image, 9);
+         log_cb(RETRO_LOG_INFO, "Work disk \"%s\" detached from drive #%d.\n", attached_image, 9);
          file_system_detach_disk(9, 0);
          log_resources_set_int("Drive9Type", DRIVE_TYPE_NONE);
          if (string_is_empty(full_path))
@@ -1628,7 +1628,7 @@ void update_work_disk(void)
 
       if ((attached_image = fsdevice_get_path(9)) != NULL && strstr(attached_image, work_disk_basename))
       {
-         log_cb(RETRO_LOG_INFO, "Work directory '%s' detached from drive #%d\n", attached_image, 9);
+         log_cb(RETRO_LOG_INFO, "Work directory \"%s\" detached from drive #%d.\n", attached_image, 9);
          log_resources_set_int("IECDevice9", 0);
          log_resources_set_int("FileSystemDevice9", 0);
          if (string_is_empty(full_path))
@@ -1679,9 +1679,9 @@ void update_from_vice(void)
 #endif
 
    if (autostartString)
-      log_cb(RETRO_LOG_INFO, "Image for autostart: '%s'\n", autostartString);
+      log_cb(RETRO_LOG_INFO, "Image for autostart: \"%s\".\n", autostartString);
    else
-      log_cb(RETRO_LOG_INFO, "No image for autostart\n");
+      log_cb(RETRO_LOG_INFO, "No image for autostart.\n");
 
    /* If flip list is empty, get current tape or floppy image name and add to the list */
    if (dc->count == 0)
@@ -1765,7 +1765,7 @@ void update_from_vice(void)
             /* Don't attach if we will autostart from it just in a moment */
             if (autostartString != NULL || noautostart)
             {
-               log_cb(RETRO_LOG_INFO, "Attaching first tape '%s'\n", attachedImage);
+               log_cb(RETRO_LOG_INFO, "Attaching first tape \"%s\".\n", attachedImage);
                tape_image_attach(dc->unit, attachedImage);
             }
          }
@@ -1782,7 +1782,7 @@ void update_from_vice(void)
             /* Don't attach if we will autostart from it just in a moment */
             if (autostartString != NULL || noautostart)
             {
-               log_cb(RETRO_LOG_INFO, "Attaching first disk '%s' to drive #%d\n", attachedImage, dc->unit);
+               log_cb(RETRO_LOG_INFO, "Attaching first disk \"%s\" to drive #%d.\n", attachedImage, dc->unit);
                file_system_attach_disk(dc->unit, 0, attachedImage);
             }
          }
@@ -1797,7 +1797,7 @@ void update_from_vice(void)
                   if (strstr(dc->labels[i], M3U_SAVEDISK_LABEL))
                      continue;
 
-                  log_cb(RETRO_LOG_INFO, "Attaching disk '%s' to drive #%d\n", dc->files[i], dc->unit + i);
+                  log_cb(RETRO_LOG_INFO, "Attaching disk \"%s\" to drive #%d.\n", dc->files[i], dc->unit + i);
                   file_system_attach_disk(dc->unit + i, 0, dc->files[i]);
                   autodetect_drivetype(dc->unit + i);
                }
@@ -1818,7 +1818,7 @@ void update_from_vice(void)
             /* Don't attach if we will autostart from it just in a moment */
             if (autostartString != NULL || noautostart)
             {
-               log_cb(RETRO_LOG_INFO, "Attaching first cart '%s'\n", attachedImage);
+               log_cb(RETRO_LOG_INFO, "Attaching first cart \"%s\".\n", attachedImage);
 #if defined(__XVIC__)
                cartridge_attach_image(vic20_autodetect_cartridge_type(attachedImage), attachedImage);
 #elif defined(__XPLUS4__)
@@ -1862,7 +1862,7 @@ void update_from_vice(void)
    /* If there an image attached, but autostart is empty, autostart from the image */
    if (string_is_empty(autostartString) && !string_is_empty(attachedImage) && !noautostart && !CMDFILE[0])
    {
-      log_cb(RETRO_LOG_INFO, "Autostarting from attached or first image '%s'\n", attachedImage);
+      log_cb(RETRO_LOG_INFO, "Autostarting from attached or first image \"%s\".\n", attachedImage);
       autostartString = x_strdup(attachedImage);
       if (!string_is_empty(autostartProgram))
          charset_petconvstring((uint8_t *)autostartProgram, 0);
@@ -2065,17 +2065,17 @@ static void content_exceptions(void)
       }
 
       if (request_model_auto_set == C64MODEL_C64_NTSC)
-         log_cb(RETRO_LOG_INFO, "Requesting C64 NTSC mode\n");
+         log_cb(RETRO_LOG_INFO, "Requesting C64 NTSC mode.\n");
       else if (request_model_auto_set == C64MODEL_C64C_NTSC)
-         log_cb(RETRO_LOG_INFO, "Requesting C64C NTSC mode\n");
+         log_cb(RETRO_LOG_INFO, "Requesting C64C NTSC mode.\n");
       else if (request_model_auto_set == C64MODEL_C64_PAL)
-         log_cb(RETRO_LOG_INFO, "Requesting C64 PAL mode\n");
+         log_cb(RETRO_LOG_INFO, "Requesting C64 PAL mode.\n");
       else if (request_model_auto_set == C64MODEL_C64C_PAL)
-         log_cb(RETRO_LOG_INFO, "Requesting C64C PAL mode\n");
+         log_cb(RETRO_LOG_INFO, "Requesting C64C PAL mode.\n");
       else if (request_model_auto_set == C64MODEL_C64_GS)
-         log_cb(RETRO_LOG_INFO, "Requesting C64GS mode\n");
+         log_cb(RETRO_LOG_INFO, "Requesting C64GS mode.\n");
       else if (request_model_auto_set == C64MODEL_ULTIMAX)
-         log_cb(RETRO_LOG_INFO, "Requesting ULTIMAX mode\n");
+         log_cb(RETRO_LOG_INFO, "Requesting ULTIMAX mode.\n");
 #elif defined(__X128__)
       /* Respect the revision */
       switch (request_model_auto_set)
@@ -2103,22 +2103,22 @@ static void content_exceptions(void)
       }
 
       if (request_model_auto_set == C128MODEL_C128_NTSC)
-         log_cb(RETRO_LOG_INFO, "Requesting C128 NTSC mode\n");
+         log_cb(RETRO_LOG_INFO, "Requesting C128 NTSC mode.\n");
       else if (request_model_auto_set == C128MODEL_C128D_NTSC)
-         log_cb(RETRO_LOG_INFO, "Requesting C128D NTSC mode\n");
+         log_cb(RETRO_LOG_INFO, "Requesting C128D NTSC mode.\n");
       else if (request_model_auto_set == C128MODEL_C128DCR_NTSC)
-         log_cb(RETRO_LOG_INFO, "Requesting C128DCR NTSC mode\n");
+         log_cb(RETRO_LOG_INFO, "Requesting C128DCR NTSC mode.\n");
       else if (request_model_auto_set == C128MODEL_C128_PAL)
-         log_cb(RETRO_LOG_INFO, "Requesting C128 PAL mode\n");
+         log_cb(RETRO_LOG_INFO, "Requesting C128 PAL mode.\n");
       else if (request_model_auto_set == C128MODEL_C128D_PAL)
-         log_cb(RETRO_LOG_INFO, "Requesting C128D PAL mode\n");
+         log_cb(RETRO_LOG_INFO, "Requesting C128D PAL mode.\n");
       else if (request_model_auto_set == C128MODEL_C128DCR_PAL)
-         log_cb(RETRO_LOG_INFO, "Requesting C128DCR PAL mode\n");
+         log_cb(RETRO_LOG_INFO, "Requesting C128DCR PAL mode.\n");
 #elif defined(__XVIC__)
       if (request_model_auto_set == VIC20MODEL_VIC20_NTSC)
-         log_cb(RETRO_LOG_INFO, "Requesting NTSC mode\n");
+         log_cb(RETRO_LOG_INFO, "Requesting NTSC mode.\n");
       else if (request_model_auto_set == VIC20MODEL_VIC20_PAL)
-         log_cb(RETRO_LOG_INFO, "Requesting PAL mode\n");
+         log_cb(RETRO_LOG_INFO, "Requesting PAL mode.\n");
 #endif
 
       /* Lock automatic model when requested */
@@ -2138,7 +2138,7 @@ static void content_exceptions(void)
    {
       if (!vice_opt.DriveTrueEmulation)
       {
-         log_cb(RETRO_LOG_INFO, "Tapecart does not work without TDE, enabling..\n");
+         log_cb(RETRO_LOG_INFO, "Tapecart does not work without TDE, enabling...\n");
          toggle_tde(1);
          reload_restart();
       }
@@ -2162,7 +2162,7 @@ static void content_exceptions(void)
       opt_supercpu_kernal = 0;
 #endif
 
-      log_cb(RETRO_LOG_INFO, "D2M/D4M does not work with TDE, disabling..\n");
+      log_cb(RETRO_LOG_INFO, "D2M/D4M does not work with TDE, disabling...\n");
       toggle_tde(0);
       reload_restart();
    }
@@ -8715,7 +8715,7 @@ size_t retro_serialize_size(void)
          }
          else
          {
-            log_cb(RETRO_LOG_INFO, "Failed to calculate snapshot size\n");
+            log_cb(RETRO_LOG_ERROR, "Failed to calculate snapshot size.\n");
          }
          snapshot_fclose(snapshot_stream);
          snapshot_stream = NULL;
@@ -8757,7 +8757,7 @@ bool retro_serialize(void *data_, size_t size)
       {
          return true;
       }
-      log_cb(RETRO_LOG_INFO, "Failed to serialize snapshot\n");
+      log_cb(RETRO_LOG_ERROR, "Failed to serialize snapshot.\n");
    }
    return false;
 }
@@ -8787,7 +8787,7 @@ bool retro_unserialize(const void *data_, size_t size)
          retro_unserialize_post();
          return true;
       }
-      log_cb(RETRO_LOG_INFO, "Failed to unserialize snapshot\n");
+      log_cb(RETRO_LOG_ERROR, "Failed to unserialize snapshot.\n");
    }
    return false;
 }
