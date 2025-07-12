@@ -2913,7 +2913,7 @@ static void retro_set_core_options()
          "vice_warp_boost",
          "Media > Warp Boost",
          "Warp Boost",
-         "Make warp mode much faster by changing SID emulation to 'FastSID' while warping.",
+         "Make warp mode much faster by changing SID emulation to 'FastSID' while warping. Affects audio detection during warp.",
          NULL,
          "media",
          {
@@ -8333,18 +8333,24 @@ void retro_run(void)
       /* Frame-based tape autoloadwarping for fast audio detection */
       if (tape_enabled && (opt_autoloadwarp & AUTOLOADWARP_TAPE || vsync_get_warp_mode()) && !retro_warpmode)
       {
-         bool audio = false;
+         bool audio = !(opt_autoloadwarp & AUTOLOADWARP_MUTE) && opt_autoloadwarp & AUTOLOADWARP_TAPE ? audio_is_playing : false;
 
-         audio = !(opt_autoloadwarp & AUTOLOADWARP_MUTE) && opt_autoloadwarp & AUTOLOADWARP_TAPE ? audio_is_playing : false;
-
-         if (tape_control == 1 && tape_motor && !audio && !vsync_get_warp_mode())
+         if (     !vsync_get_warp_mode()
+               && !audio
+               && tape_control == 1
+               && tape_motor)
          {
             vsync_set_warp_mode(1);
 #if AUTOLOADWARP_TAPE_DEBUG
             printf("Tape Warp  ON, control:%d motor:%d audio:%d\n", tape_control, tape_motor, audio);
 #endif
          }
-         else if ((tape_control != 1 || !tape_motor || audio) && vsync_get_warp_mode() || !(opt_autoloadwarp & AUTOLOADWARP_TAPE))
+         else if (vsync_get_warp_mode()
+               && tape_counter > 15
+               && (  audio
+                  || tape_control != 1
+                  || !tape_motor
+                  || !(opt_autoloadwarp & AUTOLOADWARP_TAPE)))
          {
             vsync_set_warp_mode(0);
 #if AUTOLOADWARP_TAPE_DEBUG
@@ -8361,7 +8367,7 @@ void retro_run(void)
             && retro_key_state_internal[RETROK_SPACE])
       {
          audio_is_ignored = true;
-         statusbar_message_show(9, "%s", "Resuming warp..");
+         statusbar_message_show(9, "%s", "Resuming warp...");
       }
       else if (opt_autoloadwarp & AUTOLOADWARP_TAPE
             && tape_enabled && !tape_motor
