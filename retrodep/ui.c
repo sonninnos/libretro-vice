@@ -73,7 +73,7 @@ extern unsigned int opt_supercpu_kernal;
 extern dc_storage* dc;
 extern bool retro_ui_finalized;
 extern bool opt_jiffydos;
-extern bool opt_autoloadwarp;
+extern unsigned int opt_autoloadwarp;
 extern char full_path[RETRO_PATH_MAX];
 extern char retro_system_data_directory[RETRO_PATH_MAX];
 extern bool log_resource_set;
@@ -489,7 +489,7 @@ int ui_init_finalize(void)
    else
       log_resources_set_int("DriveSoundEmulation", 0);
 
-   if (vice_opt.DriveSoundEmulation && opt_autoloadwarp & AUTOLOADWARP_DISK && !(opt_autoloadwarp & AUTOLOADWARP_MUTE))
+   if (vice_opt.DriveSoundEmulation && (opt_autoloadwarp & AUTOLOADWARP_DISK) && !(opt_autoloadwarp & AUTOLOADWARP_MUTE))
       log_resources_set_int("DriveSoundEmulationVolume", 0);
 
    if ((!string_is_empty(dc->files[dc->index]) && strendswith(dc->files[dc->index], ".d81"))
@@ -502,7 +502,7 @@ int ui_init_finalize(void)
    else
       log_resources_set_int("DatasetteSound", 0);
 
-   if (vice_opt.DatasetteSound && opt_autoloadwarp & AUTOLOADWARP_TAPE && !(opt_autoloadwarp & AUTOLOADWARP_MUTE))
+   if (vice_opt.DatasetteSound && (opt_autoloadwarp & AUTOLOADWARP_TAPE) && !(opt_autoloadwarp & AUTOLOADWARP_MUTE))
       log_resources_set_int("DatasetteSound", 0);
 #endif
 
