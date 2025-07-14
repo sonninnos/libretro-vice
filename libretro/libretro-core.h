@@ -160,6 +160,7 @@ extern int tape_enabled;
 extern int tape_counter;
 extern int tape_control;
 extern int tape_motor;
+extern int tape_found_counter;
 
 extern unsigned int retro_warpmode;
 extern int crop_id;

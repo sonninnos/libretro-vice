@@ -8346,7 +8346,7 @@ void retro_run(void)
 #endif
          }
          else if (vsync_get_warp_mode()
-               && tape_counter > 15
+               && tape_counter > tape_found_counter
                && (  audio
                   || tape_control != 1
                   || !tape_motor

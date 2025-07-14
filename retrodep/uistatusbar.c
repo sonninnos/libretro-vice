@@ -396,6 +396,7 @@ int tape_enabled = 0;
 int tape_control = 0;
 int tape_counter = 0;
 int tape_motor = 0;
+int tape_found_counter = 0;
 
 static void display_tape(void)
 {
@@ -409,6 +410,8 @@ static void display_tape(void)
 
     if (tape_enabled)
         snprintf(tmpstr, sizeof(tmpstr), "%c%03d", tape_chars[tape_control], tape_counter);
+    else
+        tape_found_counter = 0;
 
     /* Skip null terminator */
     strncpy(&statusbar_chars[STATUSBAR_TAPE_POS], tmpstr, sizeof(tmpstr)-1);

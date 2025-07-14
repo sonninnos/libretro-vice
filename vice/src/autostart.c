@@ -85,6 +85,8 @@
 
 #ifdef __LIBRETRO__
 extern unsigned int retro_warpmode;
+extern int tape_counter;
+extern int tape_found_counter;
 #endif
 
 #ifdef DEBUG_AUTOSTART
@@ -1179,6 +1181,18 @@ static void advance_loadingtape(void)
         case NOT_YET:
             /* leave autostart and disable warp if ROM area was left */
             check_rom_area();
+#ifdef __LIBRETRO__
+            if (!tape_counter)
+                break;
+            switch (check2("FOUND ", AUTOSTART_NOWAIT_BLINK, 0 , 0)) {
+                case YES:
+                    if (!tape_found_counter)
+                       tape_found_counter = tape_counter;
+                    break;
+                default:
+                    break;
+            }
+#endif
             break;
     }
 }
