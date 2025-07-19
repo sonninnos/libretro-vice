@@ -81,7 +81,6 @@ unsigned int opt_mapping_options_display = 1;
 unsigned int retro_region = 0;
 float retro_refresh = 0;
 static unsigned int sound_sample_rate_prev = 0;
-static float aspect_ratio_prev = 0;
 
 bool retro_ui_finalized = false;
 bool log_resource_set = false;
@@ -7902,7 +7901,6 @@ void update_geometry(int mode)
 {
    struct retro_system_av_info system_av_info;
    bool update_av_info  = false;
-   bool update_geometry = true;
 
    defaultw = retrow;
    defaulth = retroh;
@@ -7916,8 +7914,7 @@ void update_geometry(int mode)
    {
       case 0:
          /* Crop mode init */
-         if (crop_id)
-            crop_id_prev     = -1;
+         crop_id_prev        = -1;
          retrow_crop         = retrow;
          retroh_crop         = retroh;
          retroXS_crop_offset = 0;
@@ -8103,11 +8100,6 @@ void update_geometry(int mode)
          system_av_info.geometry.base_width   = retrow_crop;
          system_av_info.geometry.base_height  = retroh_crop;
          system_av_info.geometry.aspect_ratio = retro_get_aspect_ratio(retrow_crop, retroh_crop, false);
-
-         if (     retrow_crop_prev  == system_av_info.geometry.base_width
-               && retroh_crop_prev  == system_av_info.geometry.base_height
-               && aspect_ratio_prev == system_av_info.geometry.aspect_ratio)
-            update_geometry = false;
          break;
    }
 
@@ -8120,7 +8112,7 @@ void update_geometry(int mode)
          retro_get_system_av_info(&system_av_info);
          environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &system_av_info);
       }
-      else if (update_geometry)
+      else
       {
          environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &system_av_info);
       }
@@ -8140,7 +8132,7 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
    info->geometry.base_height  = retroh;
    info->geometry.max_width    = WINDOW_WIDTH;
    info->geometry.max_height   = WINDOW_HEIGHT;
-   info->geometry.aspect_ratio = aspect_ratio_prev = retro_get_aspect_ratio(retrow, retroh, false);
+   info->geometry.aspect_ratio = retro_get_aspect_ratio(retrow, retroh, false);
    info->timing.sample_rate    = sound_sample_rate_prev = vice_opt.SoundSampleRate;
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__)
