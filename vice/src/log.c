@@ -1045,5 +1045,6 @@ void log_resources_shutdown(void) {}
 int log_cmdline_options_init(void) {return 0;}
 int log_init_with_fd(FILE *f) {return 0;}
 int log_set_limit_early(int n) {return 0;}
+int log_get_limit(void) {return 0;}
 #endif /* __LIBRETRO__ */
 

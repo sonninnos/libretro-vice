@@ -442,7 +442,7 @@ int main_program(int argc, char **argv)
     log_message(LOG_DEFAULT, LOG_HR);
     log_message(LOG_DEFAULT, "VICE %s (%s) %s%s, %s %s", archdep_program_name(), machine_name, VERSION, GIT_VERSION, __DATE__, __TIME__);
     log_message(LOG_DEFAULT, LOG_HR);
-#else /* __LIBRETRO __ */
+#else /* __LIBRETRO__ */
     vice_banner();
 
     /* from this point on use main_log ! */
