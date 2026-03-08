@@ -452,6 +452,15 @@ void sound_volume_counter_reset(void)
    sound_volume_counter = SOUND_VOLUME_COUNTER;
 }
 
+/* Makes sure sound is closed on engine and rate changes,
+ * which also prevents crashing when rewind is enabled */
+static void libretro_sound_reset(void)
+{
+   retro_sound_keep_alive = false;
+   sound_state_changed = true;
+   sound_close();
+}
+
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
 static bool reu_allow(const char *string)
 {
@@ -6302,7 +6311,10 @@ static void update_variables(void)
       else if (!strcmp(var.value, "ReSID-FP"))  sid_engine = SID_ENGINE_RESIDFP;
 
       if (retro_ui_finalized && vice_opt.SidEngine != sid_engine)
+      {
+         libretro_sound_reset();
          log_resources_set_int("SidEngine", sid_engine);
+      }
 
       vice_opt.SidEngine = sid_engine;
    }
@@ -8285,9 +8297,7 @@ void retro_run(void)
          sound_sample_rate_prev = vice_opt.SoundSampleRate;
 
          /* Ensure audio rendering is reinitialized on next use */
-         sound_state_changed = true;
-         retro_sound_keep_alive = false;
-         sound_close();
+         libretro_sound_reset();
 
          struct retro_system_av_info system_av_info;
          retro_get_system_av_info(&system_av_info);

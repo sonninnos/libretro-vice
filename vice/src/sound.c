@@ -467,14 +467,6 @@ static int sound_machine_calculate_samples(sound_t **psid, int16_t *pbuf, int nr
     CLOCK initial_delta_t = *delta_t;
     CLOCK delta_t_for_other_chips;
 
-#ifdef __LIBRETRO__
-    if (!initial_delta_t)
-        initial_delta_t = (CLOCK)delta_t;
-
-    if (nr < 0)
-        return 0;
-#endif
-
     if (sound_calls[0]->cycle_based() || (!sound_calls[0]->cycle_based() && sound_calls[0]->chip_enabled)) {
         temp = sound_calls[0]->calculate_samples(psid, pbuf, nr, soc, scc, delta_t);
     } else {
@@ -1415,6 +1407,13 @@ static int sound_run_sound(void)
             return i;
         }
     }
+
+#ifdef __LIBRETRO__
+    /* Serialization/rewind crash guard */
+    if (        cycle_based && (snddata.lastclk > maincpu_clk)
+            || !cycle_based && (snddata.fclk > maincpu_clk))
+        return 0;
+#endif
 
     /* if "disable sound emulation on warp" is enabled, exit */
     if ((sound_emulation_enabled_on_warp == 0) && warp_mode_enabled) {
