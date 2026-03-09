@@ -62,3 +62,5 @@ void joystick_arch_shutdown(void)
 }
 
 /* ------------------------------------------------------------------------- */
+
+void joystick_ui_event(void *input, joystick_input_t type, int32_t value) {}

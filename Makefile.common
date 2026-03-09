@@ -282,6 +282,7 @@ SOURCES_C_USERPORT := \
     $(EMU)/userport/userport_spt_joystick.c \
     $(EMU)/userport/userport_superpad64.c \
     $(EMU)/userport/userport_synergy_joystick.c \
+    $(EMU)/userport/userport_v8_joystick.c \
     $(EMU)/userport/userport_wic64.c \
     $(EMU)/userport/userport_woj_joystick.c
 

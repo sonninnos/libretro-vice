@@ -1162,7 +1162,8 @@ int main(int argc, char **argv)
 
         /* reading offset */
         if (!strcmp(argv[0], "-skip") || !strcmp(argv[0], "-offset")) {
-            if (argc > 1 && sscanf(argv[1], "%lx", &offset) == 1) {
+            if (argc > 1) {
+                offset = strtoul(argv[1], NULL, 0);
                 --argc; ++argv;
                 continue;
             }
@@ -1327,6 +1328,12 @@ int main(int argc, char **argv)
         } else {
             if (hdr) { /* name as comment when using petcat name.prg > name.txt */
                 fprintf(dest, "\n\n;%s ", (fil ? argv[0] : "<stdin>"));
+            }
+
+            /* skip "offset" bytes */
+            while (offset > 0) {
+                getc(source);
+                offset--;
             }
 
             /*
@@ -1689,7 +1696,7 @@ static void _p_fputc(int c, int p, int quote)
 {
    if (quote && quotedcodes) {
         /* if enabled, output all quoted non alphanumeric characters as control codes */
-        if (!(((c >= 'a') && (c <= 'A')) ||
+        if (!(((c >= 'a') && (c <= 'z')) ||
               ((c >= 'A') && (c <= 'Z')) ||
               ((c >= '0') && (c <= '9')) ||
               (c == '"') /* needed so the leading quote does NOT get converted into a control code */
@@ -1863,6 +1870,52 @@ static int scan_integer(const char *line, unsigned int *num, unsigned int *digit
 }
 
 /* ------------------------------------------------------------------------- */
+
+/* some extra buffering, so we can use ungetc multiple times (libc only
+   guarantees ONE push back to work) */
+
+static int ptr_r = 0;
+static int ptr_w = 0;
+static unsigned char readbuffer[512];
+
+static int my_getc(FILE *f)
+{
+    int ch;
+    if (ptr_r != ptr_w) {
+        /* there are characters in the buffer */
+        ch = readbuffer[ptr_r];     /* get character */
+        ptr_r = (ptr_r + 1) & 511;  /* advance pointer */
+    } else {
+        /* no characters in the buffer */
+        ch = getc(f);
+    }
+    return ch;
+}
+
+static size_t my_fread(char *buffer, size_t size, size_t num, FILE *f)
+{
+    int ch, n;
+    for (n = 0; n < (size * num); n++) {
+        ch = my_getc(f);
+        if (ch == EOF) {
+            break;
+        }
+        buffer[n] = ch;
+    }
+    return n / size;
+}
+
+static int my_ungetc(FILE *f, int ch)
+{
+    readbuffer[ptr_w] = ch;     /* put character into buffer */
+    ptr_w = (ptr_w + 1) & 511;  /* advance pointer */
+    if (ptr_r == ptr_w) {
+        fprintf(stderr, "ERROR: input buffer overrun\n");
+        exit (-1);
+    }
+    return ch;
+}
+
 /*
  * convert basic (and petscii) to ascii (text)
  *
@@ -1875,8 +1928,9 @@ static int p_expand(int version, int addr, int ctrls)
 {
     static char line[4];
     int c = 0;
-    int quote, spnum, directory = 0;
+    int quote, spnum;
     int sysflg = 0;
+    int initialspace = 0;
 
     void *checksummer_data = NULL;
     if (checksummer) {
@@ -1891,47 +1945,41 @@ static int p_expand(int version, int addr, int ctrls)
      * next file on stdin intact.
      */
 
-    while ((fread(line, 1, 2, source) == 2) && (line[1]) && fread(line + 2, 1, 2, source) == 2) {
+    while ((my_fread(line, 1, 2, source) == 2) &&  /* line link */
+           (line[1] != 0) &&                       /* stop if highbyte is 0 */
+           (my_fread(line + 2, 1, 2, source) == 2) /* line number */
+        ) {
+
         quote = 0;
+
+        /* the line number */
         fprintf(dest, "%5d ", (spnum = (line[2] & 0xff) + ((line[3] & 0xff) << 8)));
         if (checksummer) {
             checksummer->init(checksummer_data, spnum);
         }
 
-        if (directory) {
-            if (spnum >= 100) {
-                spnum = 0;
-            } else if (spnum >= 10) {
-                spnum = 1;
-            } else {
-                spnum = 2;
-            }
+        /* skip 0 bytes, prevent list protection from terminating listing */
+        while ((c = my_getc(source)) != EOF && !c) {
+            /* FIXME: should we output these somehow? */
         }
 
-        /* prevent list protection from terminating listing */
+        initialspace = (c == 0x20);
 
-        while ((c = getc(source)) != EOF && !c) {
-        }
-
-        if (c == 0x12 && !line[2] && !line[3]) {  /* 00 00 12 22 */
-            directory++;
-        }
-
+        /* process the rest of the line */
         do {
-            if (checksummer)
+            if (checksummer) {
                 checksummer->process(checksummer_data, c, quote);
+            }
 
             if (c == 0x22) {
                 quote ^= c;
+            } else if (c != 0x20) {
+                initialspace = 0;
             }
 
-            /*
-             * Simons' basic. Any flag for this is not needed since it is
-             * mutually exclusive with all other implemented modes.
-             */
-
-            if (!quote && (c == 0x64)) {
-                if (((c = getc(source)) < 0x80) && basic_list[version - 1].tokens) {
+            /* Simons' basic. Tokens are prefixed by $64 */
+            if (!quote && (c == 0x64) && (version == B_SIMON)) {
+                if (((c = my_getc(source)) < 0x80) && basic_list[version - 1].tokens) {
                     fprintf(dest, "%s", basic_list[version - 1].tokens[c]);
                     continue;
                 } else {
@@ -1941,7 +1989,7 @@ static int p_expand(int version, int addr, int ctrls)
 
             /* basic 2.0, 7.0, 10.0, 65.0 and extensions */
 
-            if (!quote && c > 0x7f) {
+            if (!quote && (c > 0x7f)) {
                 /* check for keywords common to all versions, include pi */
                 if (c <= basic_list[B_1 - 1].max_token || c == 0xff) {
                     fprintf(dest, "%s", keyword[c & 0x7f]);
@@ -1956,13 +2004,13 @@ static int p_expand(int version, int addr, int ctrls)
                         if (version == B_65) {
                             /* Use the kwce65 table for BASIC 65.0, which is
                                longer than the kwce and kwce10 tables. */
-                            if ((c = getc(source)) < NUM_KWCE65) {
+                            if ((c = my_getc(source)) < NUM_KWCE65) {
                                 fprintf(dest, "%s", kwce65[c]);
                             } else {
                                 fprintf(dest, "($ce%02x)", (unsigned int)c);
                             }
                         } else {
-                            if ((c = getc(source)) <= MAX_KWCE) {
+                            if ((c = my_getc(source)) <= MAX_KWCE) {
                                 fprintf(dest, "%s", (version == B_10) ? kwce10[c] : kwce[c]);
                             } else {
                                 fprintf(dest, "($ce%02x)", (unsigned int)c);
@@ -1971,7 +2019,7 @@ static int p_expand(int version, int addr, int ctrls)
                         continue;
                     } else if (c == 0xfe && basic_list[version - 1].prefixfe) {
                         if (version == B_SXC) {
-                            if ((c = getc(source)) <= basic_list[B_SXC - 1].max_token) {
+                            if ((c = my_getc(source)) <= basic_list[B_SXC - 1].max_token) {
                                 fprintf(dest, "%s", basic_list[version - 1].tokens[c]);
                             } else {
                                 fprintf(dest, "($fe%02x)", (unsigned int)c);
@@ -1979,13 +2027,13 @@ static int p_expand(int version, int addr, int ctrls)
                         } else if (version == B_65) {
                             /* Use the kwfe65 table for BASIC 65.0, which is
                                longer than the kwfe and kwfe71 tables. */
-                            if ((c = getc(source)) <= basic_list[B_65 - 1].max_token) {
+                            if ((c = my_getc(source)) <= basic_list[B_65 - 1].max_token) {
                                 fprintf(dest, "%s", kwfe65[c]);
                             } else {
                                 fprintf(dest, "($fe%02x)", (unsigned int)c);
                             }
                         } else {
-                            if ((c = getc(source)) <= basic_list[B_10 - 1].max_token) {
+                            if ((c = my_getc(source)) <= basic_list[B_10 - 1].max_token) {
                                 fprintf(dest, "%s", (version == B_71) ? kwfe71[c] : kwfe[c]);
                             } else {
                                 fprintf(dest, "($fe%02x)", (unsigned int)c);
@@ -2030,8 +2078,13 @@ static int p_expand(int version, int addr, int ctrls)
                     case B_EVE:
                     case B_TT64:
                     case B_HANDY:
-                        if (basic_list[version - 1].tokens && c >= basic_list[version - 1].token_start && c <= basic_list[version - 1].max_token) {
+                        if ((basic_list[version - 1].tokens) &&
+                            (c >= basic_list[version - 1].token_start) &&
+                            (c <= basic_list[version - 1].max_token)) {
                             fprintf(dest, "%s", basic_list[version - 1].tokens[c - basic_list[version - 1].token_start]);
+                        } else {
+                            /* not a valid token */
+                            out_ctrl((int)c);  /* output byte as control code */
                         }
                         break;
 
@@ -2041,13 +2094,59 @@ static int p_expand(int version, int addr, int ctrls)
                 continue;
             } /* quote */
 
-            if (directory && spnum && c == 0x20) {
-                spnum--;          /* eat spaces to adjust directory lines */
-                continue;
-            }
+            /* some codes must always be converted to control codes, else they can't
+               be tokenized into the exact same thing again */
+            /* FIXME: this is also true for every keyword */
+            if ((c == 0x0d) ||  /* return */
+                (c == 0x2a) ||  /* literal "*" (else converts into a token) */
+                (c == 0x2b) ||  /* literal "+" (else converts into a token) */
+                (c == 0x2d) ||  /* literal "-" (else converts into a token) */
+                (c == 0x2f) ||  /* literal "/" (else converts into a token) */
+                (c == 0x3c) ||  /* literal "<" (else converts into a token) */
+                (c == 0x3d) ||  /* literal "=" (else converts into a token) */
+                (c == 0x3e) ||  /* literal ">" (else converts into a token) */
+                (c == 0x5e)     /* literal "^" (else converts into a token) */
+               ){
+                out_ctrl((int)c);  /* output as control code */
+            } else if (c == 0x20) {
+                if (initialspace) {
+                    out_ctrl((int)c);  /* output as control code */
+                } else {
+                    int ch;
 
-            _p_toascii((int)c, version, ctrls, quote);  /* convert character */
-        } while ((c = getc(source)) != EOF && c);
+                    _p_toascii((int)c, version, ctrls, quote);  /* convert character */
+
+                    if ((ch = my_getc(source)) == 0x20) {
+                        int extraspaces = 0;
+                        /* test if there are only spaces for the rest of the line */
+                        while ((ch = my_getc(source)) != EOF && (ch == 0x20)) {
+                            extraspaces++;
+                        }
+                        if (ch == 0) {
+                            /* end of line reached, output spaces as control codes */
+                            out_ctrl((int)0x20);
+                            while (extraspaces) {
+                                out_ctrl((int)0x20);
+                                extraspaces--;
+                            }
+                        } else {
+                            /* push back into buffer */
+                            my_ungetc(source, 0x20);
+                            while (extraspaces) {
+                                my_ungetc(source, 0x20);
+                                extraspaces--;
+                            }
+                        }
+                        my_ungetc(source, ch);
+                    } else {
+                        my_ungetc(source, ch);
+                    }
+                }
+            } else {
+                _p_toascii((int)c, version, ctrls, quote);  /* convert character */
+            }
+        } while ((c = my_getc(source)) != EOF && c);
+
         if (checksummer) {
             char *chksum = checksummer->finalize(checksummer_data);
             fprintf(dest, "\t|| %s", chksum);
@@ -2088,6 +2187,7 @@ static unsigned char* check_leading_space(int version, unsigned char* p)
     return p;
 }
 
+/* this converts ASCII to BASIC */
 static void p_tokenize(int version, unsigned int addr, int ctrls)
 {
     static char line[MAX_INLINE_LEN + 1];
@@ -2099,8 +2199,6 @@ static void p_tokenize(int version, unsigned int addr, int ctrls)
     int c;
     int ctmp = -1;
     int kwlentmp = -1;
-    unsigned char rem_data_mode;
-    unsigned char rem_data_endchar = '\0';
     unsigned int len = 0;
     unsigned int match;
     unsigned int match2;
@@ -2125,7 +2223,6 @@ static void p_tokenize(int version, unsigned int addr, int ctrls)
         DBG(("line: %u [%s]\n", linum, line));
 
         quote = 0;
-        rem_data_mode = 0;
 
         p2 = check_leading_space(version, p2);
 
@@ -2139,7 +2236,7 @@ static void p_tokenize(int version, unsigned int addr, int ctrls)
 
             match = 0;
             match2 = 0;
-            if (quote) {
+
                 /*
                  * control code evaluation
                  * only strings that appear inside quotes are
@@ -2243,15 +2340,10 @@ static void p_tokenize(int version, unsigned int addr, int ctrls)
                     fprintf(stderr, "error: line %u - unknown control code: %s\n",
                             linum, p);
                     exit(-1);
-                }
-/*    DBG(("controlcode end\n")); */
-            } else if (rem_data_mode) {
-                /* if we have already encountered a REM or a DATA,
-                   simply copy the char */
 
-                /* DO NOTHING! As we do not set "match", the if (!match) will be true,
-                 * and this part will copy the char over to the new buffer */
-            } else if (isalpha((unsigned char)*p2) || strchr("+-*/^>=<", *p2)) {
+/*    DBG(("controlcode end\n")); */
+
+            } else if (!quote && (isalpha((unsigned char)*p2) || strchr("+-*/^>=<", *p2))) {
                 /* FE and CE prefixes are checked first */
                 if (version == B_7 || version == B_71 || version == B_10 || version == B_65 || version == B_SXC || version == B_SIMON) {
                     switch (version) {
@@ -2357,21 +2449,6 @@ static void p_tokenize(int version, unsigned int addr, int ctrls)
                         if ((version == B_35) || (ctmp != 0x4e)) {  /* Skip prefix */
                             kwlentmp = (int)kwlen;
                             match++;
-
-                            /* Check if the keyword is a REM or a DATA */
-                            switch (ctmp) {
-                                case TOKEN_DATA:
-                                    rem_data_mode = 1;
-                                    rem_data_endchar = ':';
-                                    break;
-
-                                case TOKEN_REM:
-                                    rem_data_mode = 1;
-                                    rem_data_endchar = '\0';
-                                    break;
-                                default:
-                                    break;
-                            }
                         }
                     }
                 }
@@ -2446,11 +2523,6 @@ static void p_tokenize(int version, unsigned int addr, int ctrls)
             if (!match) {
                 /* convert character */
                 *p1++ = (unsigned char)(_a_topetscii(*p2 & 0xff, ctrls));
-
-                /* check if the REM/DATA mode has to be stopped: */
-                if (*p2 == rem_data_endchar) {
-                    rem_data_mode = 0;
-                }
 
                 p3 = p2;
                 ++p2;
