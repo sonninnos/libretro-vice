@@ -647,7 +647,7 @@ static bool dc_add_m3u_save_disk(
    if (dc == NULL)
       return false;
 
-   if (m3u_file == NULL)
+   if (m3u_file == NULL || !*m3u_file)
       return false;
 
    if (save_dir == NULL)
@@ -748,6 +748,9 @@ bool dc_save_disk_toggle(dc_storage* dc, bool file_check, bool select)
    if (!dc)
       return false;
 
+   if (!*full_path)
+      strlcpy(full_path, "vice", sizeof(full_path));
+
    if (file_check)
       return dc_add_m3u_save_disk(dc, full_path, retro_save_directory, NULL, 0, true);
 
@@ -785,7 +788,8 @@ bool dc_save_disk_toggle(dc_storage* dc, bool file_check, bool select)
       /* Widget notification */
       snprintf(message, sizeof(message),
                "%d/%d - %s",
-               dc->index+1, dc->count, path_basename(dc->labels[dc->index]));
+               dc->index+1, dc->count,
+               (dc->labels[dc->index]) ? path_basename(dc->labels[dc->index]) : save_disk_label);
       display_retro_message(message);
    }
    else
@@ -794,7 +798,7 @@ bool dc_save_disk_toggle(dc_storage* dc, bool file_check, bool select)
    return true;
 }
 
-void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const char* save_dir)
+static void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const char* save_dir)
 {
    /* Verify */
    if (dc == NULL)
