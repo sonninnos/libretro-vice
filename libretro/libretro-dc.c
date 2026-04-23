@@ -1112,8 +1112,13 @@ static void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, co
          }
 
          /* Add the file to the struct */
+#ifdef USE_LIBRETRO_VFS
          if (path_is_valid(file_path))
             dc_add_file(dc, file_path, file_label, label, image_prg);
+#else
+         if (path_is_valid(local_to_utf8_string_alloc(file_path)))
+            dc_add_file(dc, local_to_utf8_string_alloc(file_path), file_label, label, image_prg);
+#endif
          else
             log_cb(RETRO_LOG_WARN, "File '%s' from list '%s' not found!\n", file_name, list_file);
       }
