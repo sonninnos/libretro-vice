@@ -402,7 +402,7 @@ endif
 ifeq ($(DEBUG), 1)
    COMMONFLAGS += -O0 -g
 else
-   COMMONFLAGS += -O3 -DNDEBUG -Wno-format -Wno-format-security -Wno-old-style-definition
+   COMMONFLAGS += -O3 -DNDEBUG -Wno-format -Wno-format-security
    LDFLAGS     += -s
 endif
 
@@ -424,7 +424,7 @@ include Makefile.common
 OBJECTS     += $(patsubst %.cpp,%.o,$(SOURCES_CXX:.cc=.o)) $(SOURCES_C:.c=.o)
 PLATFLAGS   := $(CFLAGS)
 CXXFLAGS    += $(fpic) $(INCFLAGS) $(COMMONFLAGS)
-CFLAGS      += $(fpic) $(INCFLAGS) $(COMMONFLAGS)
+CFLAGS      += $(fpic) $(INCFLAGS) $(COMMONFLAGS) -Wno-old-style-definition
 LDFLAGS     += -lm $(fpic)
 
 OBJDIR      := build
