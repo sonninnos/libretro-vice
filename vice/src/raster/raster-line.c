@@ -43,9 +43,6 @@
 #include "raster.h"
 #include "viewport.h"
 
-#ifdef __LIBRETRO__
-#include "libretro-core.h"
-#endif
 
 unsigned int raster_line_get_real_mode(raster_t *raster)
 {
@@ -132,9 +129,6 @@ inline static void handle_blank_line_cached(raster_t *raster)
 
 static void handle_blank_line(raster_t *raster)
 {
-#ifdef __LIBRETRO__
-    vice_raster.blanked++;
-#endif
     if (raster->changes->have_on_this_line) {
         raster_changes_t *border_changes;
         unsigned int i, xs;

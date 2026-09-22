@@ -365,7 +365,7 @@ struct vice_raster_s
    unsigned last_line_active;
 
    unsigned counter;
-   unsigned blanked;
+   bool crop_disabled;
 };
 
 extern struct vice_raster_s vice_raster;

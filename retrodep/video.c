@@ -116,6 +116,8 @@ int video_canvas_set_palette(struct video_canvas_s *canvas,
    return 0;
 }
 
+#define CROP_DEBUG 0
+
 static void video_canvas_crop(struct video_canvas_s *canvas)
 {
    unsigned i                  = 0;
@@ -136,8 +138,6 @@ static void video_canvas_crop(struct video_canvas_s *canvas)
    {
       crop_top_border     = CROP_VDC_TOP_BORDER;
       crop_left_border    = CROP_VDC_LEFT_BORDER;
-
-      vice_raster.blanked = 0;
    }
 #elif defined(__XPET__)
    if (retrow > 384)
@@ -154,21 +154,23 @@ static void video_canvas_crop(struct video_canvas_s *canvas)
 #elif defined(__XVIC__)
    if (retroh == 234)
       crop_top_border = CROP_TOP_BORDER_NTSC;
-
-   vice_raster.blanked = 0;
 #endif
 
    /* Reset to maximum crop */
    vice_raster.first_line = (crop_id == 0 && crop_id != crop_id_prev) ? 0 : crop_top_border;
    vice_raster.last_line  = (crop_id == 0 && crop_id != crop_id_prev) ? retroh : vice_raster.first_line + crop_height_max;
 
+   /* Reset to no crop when Auto-Disable has disabled crop */
+   if (crop_id == CROP_AUTO_DISABLE && vice_raster.crop_disabled)
+   {
+      vice_raster.first_line = 0;
+      vice_raster.last_line  = retroh;
+   }
+   else
    switch (crop_id)
    {
       case CROP_AUTO:
-#if !defined(__X64__)
-      /* Accurate VIC-II requires different method for Auto-Disable */
       case CROP_AUTO_DISABLE:
-#endif
          /* Pixel color per row must change, and border colors must
           * differ in order to count as a show-worthy row, otherwise
           * loaders with flashing borders would count as hits */
@@ -176,7 +178,7 @@ static void video_canvas_crop(struct video_canvas_s *canvas)
          crop_bottom_border = crop_top_border + crop_height_max;
 
          /* Top border, start from top */
-         for (i = 0; i < crop_top_border && !vice_raster.blanked; i++)
+         for (i = 0; i < crop_top_border; i++)
          {
             unsigned row      = i * (retrow << (pix_bytes >> 2));
             unsigned color    = row + (crop_left_border + crop_pad) * (pix_bytes >> 1);
@@ -191,26 +193,26 @@ static void video_canvas_crop(struct video_canvas_s *canvas)
                if (abs(retro_bmp[pixel] - retro_bmp[color]) > color_diff)
                   found++;
 
-               if (     found
-                     && retro_bmp[lb_color] != retro_bmp[pixel]
-                     && retro_bmp[rb_color] != retro_bmp[pixel])
+               if (     (found && (retro_bmp[lb_color] == retro_bmp[rb_color] && retro_bmp[lb_color] != retro_bmp[pixel] && retro_bmp[rb_color] != retro_bmp[pixel]))
+                     || (i < crop_top_border && retro_bmp[lb_color] != retro_bmp[color] && retro_bmp[rb_color] != retro_bmp[color])
+                  )
                {
-#if 0
-                  printf("%s: FRST %3d %3d, %3d %d %d\n", __func__, i, j, found, retro_bmp[color], retro_bmp[pixel]);
+#if CROP_DEBUG
+                  printf("%s: FRST y=%3d x=%3d - found=%d color=%5d pixel=%5d lb=%5d rb=%5d\n", __func__, i, j, found, retro_bmp[color], retro_bmp[pixel], retro_bmp[lb_color], retro_bmp[rb_color]);
 #endif
                   vice_raster.first_line = i;
                   break;
                }
             }
 
-            if (vice_raster.first_line < crop_top_border)
+            if (vice_raster.first_line < crop_top_border || found)
                break;
          }
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          /* Allow bottom border upwards a few rows if top border is not used much.
           * For oddly shifted cases: Alien Syndrome, Out Run Europa */
-         if (vice_raster.first_line > 20)
+         if (vice_raster.first_line >= 20 && vice_raster.first_line < 35)
             crop_bottom_border -= 5;
 #endif
 
@@ -225,8 +227,8 @@ static void video_canvas_crop(struct video_canvas_s *canvas)
          }
 #endif
 
-         /* Bottom border, start from bottom, almost */
-         for (i = retroh - 2; i > crop_bottom_border && !vice_raster.blanked; i--)
+         /* Bottom border, start from bottom, almost (Outlaw draws to line 271) */
+         for (i = retroh - 1; i > crop_bottom_border; i--)
          {
             unsigned row      = i * (retrow << (pix_bytes >> 2));
             unsigned color    = row + (crop_left_border + crop_pad) * (pix_bytes >> 1);
@@ -241,20 +243,19 @@ static void video_canvas_crop(struct video_canvas_s *canvas)
                if (abs(retro_bmp[pixel] - retro_bmp[color]) > color_diff)
                   found++;
 
-               if (     found
-                     && retro_bmp[lb_color] != retro_bmp[pixel]
-                     && retro_bmp[rb_color] != retro_bmp[pixel]
+               if (     (found && (retro_bmp[lb_color] == retro_bmp[rb_color] && retro_bmp[lb_color] != retro_bmp[pixel] && retro_bmp[rb_color] != retro_bmp[pixel]))
+                     || (i < crop_bottom_border && retro_bmp[lb_color] != retro_bmp[color] && retro_bmp[rb_color] != retro_bmp[color])
                   )
                {
-#if 0
-                  printf("%s: LAST %3d %3d, %3d %d %d\n", __func__, i, j, found, retro_bmp[color], retro_bmp[pixel]);
+#if CROP_DEBUG
+                  printf("%s: LAST y=%3d x=%3d - found=%d color=%5d pixel=%5d lb=%5d rb=%5d\n", __func__, i, j, found, retro_bmp[color], retro_bmp[pixel], retro_bmp[lb_color], retro_bmp[rb_color]);
 #endif
                   vice_raster.last_line = i + 1;
                   break;
                }
             }
 
-            if (vice_raster.last_line > crop_top_border + crop_height_max)
+            if (vice_raster.last_line > crop_top_border + crop_height_max || found)
                break;
          }
 
@@ -281,18 +282,9 @@ static void video_canvas_crop(struct video_canvas_s *canvas)
          if ((vice_raster.last_line - vice_raster.first_line) % 2)
             vice_raster.last_line++;
 
-         /* Auto-Disable for x64sc */
-         if (     crop_id == CROP_AUTO_DISABLE
-               && (  vice_raster.first_line != crop_top_border
-                  || vice_raster.last_line  != vice_raster.first_line + crop_height_max))
-         {
-            vice_raster.first_line = 0;
-            vice_raster.last_line  = retroh;
-         }
-
          /* Result pondering with stabilization period */
-         if (vice_raster.first_line != vice_raster.first_line_prev ||
-             vice_raster.last_line  != vice_raster.last_line_prev)
+         if (     vice_raster.first_line != vice_raster.first_line_prev
+               || vice_raster.last_line  != vice_raster.last_line_prev)
          {
             vice_raster.counter = 0;
 
@@ -303,16 +295,36 @@ static void video_canvas_crop(struct video_canvas_s *canvas)
                vice_raster.last_line_maybe  = vice_raster.last_line;
          }
 
-         if (      (  vice_raster.first_line == vice_raster.first_line_maybe
-                   || vice_raster.last_line  == vice_raster.last_line_maybe)
-                && (  vice_raster.first_line != vice_raster.first_line_active
-                   || vice_raster.last_line  != vice_raster.last_line_active))
-         {
+         if (     (  vice_raster.first_line == vice_raster.first_line_maybe
+                  || vice_raster.last_line  == vice_raster.last_line_maybe)
+               && (  vice_raster.first_line != vice_raster.first_line_active
+                  || vice_raster.last_line  != vice_raster.last_line_active))
             vice_raster.counter++;
-         }
+
+#if CROP_DEBUG
+         printf("%s: count=%d, FIRST=%3d active=%3d maybe=%3d prev=%3d, LAST=%3d active=%3d maybe=%3d prev=%3d\n", __func__,
+               vice_raster.counter,
+               vice_raster.first_line, vice_raster.first_line_active, vice_raster.first_line_maybe, vice_raster.first_line_prev,
+               vice_raster.last_line, vice_raster.last_line_active, vice_raster.last_line_maybe, vice_raster.last_line_prev);
+#endif
 
          if (vice_raster.counter > crop_counter)
          {
+            vice_raster.first_line = vice_raster.first_line_maybe;
+            vice_raster.last_line  = vice_raster.last_line_maybe;
+
+            if (crop_id == CROP_AUTO_DISABLE)
+            {
+               /* Trigger centering only if size stays the same (Alien Syndrome) */
+               if (vice_raster.last_line - vice_raster.first_line > crop_height_max)
+               {
+                  vice_raster.first_line = 0;
+                  vice_raster.last_line  = retroh;
+                  /* Remember disabled state until core reset */
+                  vice_raster.crop_disabled = true;
+               }
+            }
+
             if (     (retroh_crop != vice_raster.last_line - vice_raster.first_line)
                   || vice_raster.first_line != vice_raster.first_line_active
                   || vice_raster.last_line  != vice_raster.last_line_active)
@@ -322,54 +334,7 @@ static void video_canvas_crop(struct video_canvas_s *canvas)
             vice_raster.first_line_active = vice_raster.first_line;
             vice_raster.last_line_active  = vice_raster.last_line;
          }
-
-#if 0
-         printf("%s: %d, first=%d active=%d maybe=%d prev=%d, last=%d active=%d maybe=%d prev=%d\n", __func__,
-               vice_raster.counter,
-               vice_raster.first_line, vice_raster.first_line_active, vice_raster.first_line_maybe, vice_raster.first_line_prev,
-               vice_raster.last_line, vice_raster.last_line_active, vice_raster.last_line_maybe, vice_raster.last_line_prev);
-#endif
          break;
-
-#if defined(__X64__)
-      /* Quick line 'blanking' only works with fast core */
-      case CROP_AUTO_DISABLE:
-         crop_counter = (crop_delay) ? 1 : 0;
-
-         if (!vice_raster.blanked)
-         {
-            vice_raster.first_line = 0;
-            vice_raster.last_line  = retroh;
-         }
-
-         /* Result pondering with stabilization period */
-         if (vice_raster.first_line != vice_raster.first_line_prev ||
-             vice_raster.last_line  != vice_raster.last_line_prev)
-         {
-            vice_raster.counter          = 0;
-            vice_raster.first_line_maybe = vice_raster.first_line;
-            vice_raster.last_line_maybe  = vice_raster.last_line;
-         }
-
-         if (      (  vice_raster.first_line  == vice_raster.first_line_maybe
-                   || vice_raster.last_line   == vice_raster.last_line_maybe)
-                && (  vice_raster.first_line != vice_raster.first_line_active
-                   || vice_raster.last_line  != vice_raster.last_line_active))
-         {
-            vice_raster.counter++;
-         }
-
-         if (vice_raster.counter > crop_counter)
-         {
-            if (retroh_crop != vice_raster.last_line - vice_raster.first_line)
-               crop_id_prev               = -1;
-
-            vice_raster.counter           = 0;
-            vice_raster.first_line_active = vice_raster.first_line;
-            vice_raster.last_line_active  = vice_raster.last_line;
-         }
-         break;
-#endif
 
       default:
          break;
@@ -377,7 +342,6 @@ static void video_canvas_crop(struct video_canvas_s *canvas)
 
    vice_raster.first_line_prev = vice_raster.first_line;
    vice_raster.last_line_prev  = vice_raster.last_line;
-   vice_raster.blanked         = 0;
 }
 
 void video_canvas_refresh(struct video_canvas_s *canvas,

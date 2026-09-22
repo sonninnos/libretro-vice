@@ -3091,7 +3091,7 @@ static void retro_set_core_options()
          "vice_crop",
          "Video > Crop",
          "Crop",
-         "Remove borders according to 'Crop Mode'.",
+         "Remove borders according to 'Crop Mode'. 'Auto-Disable' stays disabled until content reset.",
          NULL,
          "video",
          {
@@ -7709,6 +7709,9 @@ void retro_reset(void)
       retro_disk_set_eject_state(false);
    }
 
+   /* Reset auto-disable crop */
+   vice_raster.crop_disabled = false;
+
    /* Trigger autostart-reset in retro_run() */
    request_restart = true;
 }
@@ -8077,6 +8080,7 @@ void update_geometry(int mode)
                switch (crop_id)
                {
                   case CROP_AUTO:
+                  case CROP_AUTO_DISABLE:
                      /* Reset autocentering depending on mode */
                      if (crop_height > 0 && vice_raster.first_line >= 0)
                         retroYS_crop_offset = vice_raster.first_line + (crop_height - crop_height_o) / 2;
@@ -8605,6 +8609,9 @@ void retro_unload_game(void)
    autostartString = NULL;
    free(autostartProgram);
    autostartProgram = NULL;
+
+   /* Reset auto-disable crop */
+   vice_raster.crop_disabled = false;
 
    retro_sound_keep_alive = false;
    cur_port_locked = false;
