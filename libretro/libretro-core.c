@@ -7539,6 +7539,8 @@ bool retro_disk_set_eject_state(bool ejected)
                break;
             case 1:
                tape_image_attach(unit, dc->files[dc->index]);
+               retro_key_down(RETROK_SPACE);
+               retro_key_up(RETROK_SPACE);
                datasette_control(TAPEPORT_PORT_1, DATASETTE_CONTROL_START);
                break;
             default:
