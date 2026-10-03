@@ -996,9 +996,11 @@ static void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, co
                }
                else if (cnt == 3)
                {
-                  /* Non-basic load toggler */
-                  if (string_is_equal(token, ",1,1"))
-                     pending_AutostartTapeBasicLoad = true;
+                  /* Non-basic tape load toggler (inverted) */
+                  if (string_is_equal(token, ",1") || string_is_equal(token, ",1,1"))
+                     pending_AutostartTapeBasicLoad = 0;
+                  else if (string_is_equal(token, ",0") || string_is_equal(token, ",1,0"))
+                     pending_AutostartTapeBasicLoad = 1;
                }
 
                token = strtok(NULL, ":");

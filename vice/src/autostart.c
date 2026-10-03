@@ -399,11 +399,7 @@ static resource_int_t resources_int_basicload[] = {
     { "AutostartBasicLoad", 0, RES_EVENT_NO, (resource_value_t)0,
       &autostart_basic_load, set_autostart_basic_load, NULL },
     /* caution: position is hardcoded below */
-#ifdef __LIBRETRO__
-    { "AutostartTapeBasicLoad", 1, RES_EVENT_NO, (resource_value_t)1,
-#else
     { "AutostartTapeBasicLoad", 0, RES_EVENT_NO, (resource_value_t)1,
-#endif
       &autostart_tape_basic_load, set_autostart_tape_basic_load, NULL },
     RESOURCE_INT_LIST_END
 };

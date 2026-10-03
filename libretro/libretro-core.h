@@ -155,7 +155,7 @@ extern unsigned int opt_statusbar;
 extern unsigned int cur_port;
 extern unsigned int retro_region;
 extern int request_model_set;
-extern bool pending_AutostartTapeBasicLoad;
+extern int pending_AutostartTapeBasicLoad;
 
 extern int tape_enabled;
 extern int tape_counter;

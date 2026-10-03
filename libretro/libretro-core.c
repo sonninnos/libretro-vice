@@ -16,6 +16,8 @@
 #include "drive.h"
 #include "tape.h"
 #include "tapeport.h"
+#include "tapecontents.h"
+#include "imagecontents.h"
 #include "diskimage.h"
 #include "fsdevice.h"
 #include "vdrive.h"
@@ -65,6 +67,7 @@ static bool noautostart_locked = false;
 static bool tde_locked = false;
 static char* autostartString = NULL;
 static char* autostartProgram = NULL;
+static uint8_t autostartProgramNumber = 0;
 char full_path[RETRO_PATH_MAX] = {0};
 
 static struct vice_core_option_info vice_carts[RETRO_NUM_CORE_OPTION_VALUES_MAX] = {0};
@@ -1654,6 +1657,7 @@ void update_from_vice(void)
    autostartString = NULL;
    free(autostartProgram);
    autostartProgram = NULL;
+   autostartProgramNumber = 0;
 
    autostartString  = x_strdup(cmdline_get_autostart_string());
    autostartProgram = x_strdup(dc->load[dc->index]);
@@ -1778,7 +1782,7 @@ void update_from_vice(void)
             }
          }
          else
-            /* In 3.9 some tapes fail to start properly without forced restart.. */
+            /* Forced restart required when launching a specified prg from the tape */
             request_restart = true;
       }
       else if (dc->unit == 8)
@@ -7391,6 +7395,9 @@ void emu_reset(int type)
    if (vsync_get_warp_mode())
       vsync_set_warp_mode(0);
 
+   /* Reset autostart */
+   autostart_reset();
+
    /* Reset Datasette or autostart from tape will fail */
    datasette_control(TAPEPORT_PORT_1, DATASETTE_CONTROL_RESET);
 
@@ -7422,6 +7429,10 @@ void emu_reset(int type)
             break;
          }
 
+         free(autostartProgram);
+         autostartProgram = NULL;
+         autostartProgramNumber = 0;
+
          /* Build direct launch PRG */
          if (dc->load[dc->index])
          {
@@ -7430,9 +7441,30 @@ void emu_reset(int type)
             path_remove_program(autostartString);
             autostartProgram = x_strdup(dc->load[dc->index]);
             charset_petconvstring((uint8_t *)autostartProgram, 0);
+
+            /* Fast-forward tape to desired program */
+            if (dc_get_image_type(dc->files[dc->index]) == DC_IMAGE_TYPE_TAPE && autostartProgram[0])
+            {
+               image_contents_t *contents = NULL;
+               image_contents_file_list_t *entry;
+
+               contents = tapecontents_read(dc->files[dc->index]);
+               if (contents != NULL)
+               {
+                  uint8_t files = 0;
+                  for (entry = contents->file_list; entry != NULL; entry = entry->next)
+                  {
+                     files++;
+                     if (strstr(entry->name, autostartProgram))
+                     {
+                        autostartProgramNumber = files;
+                        break;
+                     }
+                  }
+                  lib_free(contents);
+               }
+            }
          }
-         else
-            autostartProgram = NULL;
 
          /* Allow autostarting with a different disk */
          if (dc->count > 1)
@@ -7444,8 +7476,9 @@ void emu_reset(int type)
                autostartString = x_strdup(dc->files[dc->index]);
             }
          }
+
          if (autostartString != NULL && autostartString[0] != '\0' && !noautostart)
-            autostart_autodetect(autostartString, autostartProgram, 0, AUTOSTART_MODE_RUN);
+            autostart_autodetect(autostartString, autostartProgram, autostartProgramNumber, AUTOSTART_MODE_RUN);
 
          /* Scan for save disk index */
          signed char save_disk_index = -1;
@@ -8611,6 +8644,7 @@ void retro_unload_game(void)
    autostartString = NULL;
    free(autostartProgram);
    autostartProgram = NULL;
+   autostartProgramNumber = 0;
 
    /* Reset auto-disable crop */
    vice_raster.crop_disabled = false;
