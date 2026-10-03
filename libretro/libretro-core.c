@@ -69,6 +69,7 @@ static char* autostartString = NULL;
 static char* autostartProgram = NULL;
 static uint8_t autostartProgramNumber = 0;
 char full_path[RETRO_PATH_MAX] = {0};
+char info_path[RETRO_PATH_MAX] = {0};
 
 static struct vice_core_option_info vice_carts[RETRO_NUM_CORE_OPTION_VALUES_MAX] = {0};
 struct vice_raster_s vice_raster;
@@ -8572,6 +8573,7 @@ bool retro_load_game(const struct retro_game_info *info)
       local_path = utf8_to_local_string_alloc(info->path);
       if (local_path)
       {
+         strlcpy(info_path, local_path, sizeof(info_path));
          process_cmdline(local_path);
          free(local_path);
          local_path = NULL;

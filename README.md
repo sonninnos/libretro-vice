@@ -162,16 +162,25 @@ External ROM files required in `system/vice`:
 Custom configs can be used globally and per-content for accessing VICE options that do not exist as core options.
 
 Config files are processed first found in this order:
-1. `saves/[content].vicerc`
-2. `saves/vicerc`
-3. `system/vice/vicerc`
+1. `[content_dir]/[content].vicerc`
+2. `saves/[content].vicerc`
+3. `saves/vicerc`
+4. `system/vice/vicerc`
 
-All available options are dumped in `system/vice/vicerc-dump-[corename]` for copy-pasteing to actual config.
+All available options are dumped in `system/vice/vicerc-dump-[corename]` for copy-pasting to actual config.
 
 Options must be after the correct `[corename]` block, for example x64 fast:
 ```
 [C64]
 GMod2FlashWrite=0
+```
+
+or for x64 accurate:
+
+```
+[C64SC]
+Drive8Type=0
+AutostartTapeBasicLoad=1
 ```
 
 ## Command file operation

@@ -93,6 +93,7 @@
 #include "libretro-core.h"
 extern unsigned int opt_read_vicerc;
 extern char full_path[RETRO_PATH_MAX];
+extern char info_path[RETRO_PATH_MAX];
 extern char retro_temp_directory[RETRO_PATH_MAX];
 
 static char *argv0 = NULL;
@@ -263,23 +264,48 @@ char *archdep_default_resource_file_name(void)
         {
             char content_vicerc[RETRO_PATH_MAX]   = {0};
             char content_basename[RETRO_PATH_MAX] = {0};
-            if (!string_is_empty(full_path))
+
+            if (!string_is_empty(info_path))
             {
-               snprintf(content_basename, sizeof(content_basename), "%s", path_basename(full_path));
+               char content_dir[RETRO_PATH_MAX] = {0};
+
+               /* Parse pre-extracted content path + basename */
+               strlcpy(content_dir, info_path, sizeof(content_dir));
+               if (!string_is_empty(content_dir))
+               {
+                  path_basedir(content_dir);
+                  /* Remove trailing slash */
+                  content_dir[strlen(content_dir) - 1] = '\0';
+               }
+               snprintf(content_basename, sizeof(content_basename), "%s", path_basename(info_path));
                path_remove_extension(content_basename);
-               snprintf(content_vicerc, sizeof(content_vicerc), "%s%s%s.vicerc", SAVEDIR, ARCHDEP_DIR_SEP_STR, content_basename);
-               /* Process "saves/[content].vicerc" */
+               /* Process "[content_dir]/[content].vicerc" */
+               snprintf(content_vicerc, sizeof(content_vicerc), "%s%s%s.vicerc", content_dir, ARCHDEP_DIR_SEP_STR, content_basename);
                if (!archdep_access(content_vicerc, ARCHDEP_R_OK))
                   return util_concat(content_vicerc, NULL);
                else
                   log_message(LOG_DEFAULT, "No configuration file found at '%s'.", content_vicerc);
             }
+
+            if (!string_is_empty(full_path))
+            {
+               /* Process "saves/[content].vicerc" */
+               snprintf(content_basename, sizeof(content_basename), "%s", path_basename(full_path));
+               path_remove_extension(content_basename);
+               snprintf(content_vicerc, sizeof(content_vicerc), "%s%s%s.vicerc", SAVEDIR, ARCHDEP_DIR_SEP_STR, content_basename);
+               if (!archdep_access(content_vicerc, ARCHDEP_R_OK))
+                  return util_concat(content_vicerc, NULL);
+               else
+                  log_message(LOG_DEFAULT, "No configuration file found at '%s'.", content_vicerc);
+            }
+
             /* Process "saves/vicerc" */
             snprintf(content_vicerc, sizeof(content_vicerc), "%s%svicerc", SAVEDIR, ARCHDEP_DIR_SEP_STR);
             if (!archdep_access(content_vicerc, ARCHDEP_R_OK))
                return util_concat(content_vicerc, NULL);
             else
                log_message(LOG_DEFAULT, "No configuration file found at '%s'.", content_vicerc);
+
             /* Process "system/vice/vicerc" */
             snprintf(content_vicerc, sizeof(content_vicerc), "%s%svicerc", boot_path, ARCHDEP_DIR_SEP_STR);
             if (archdep_access(content_vicerc, ARCHDEP_R_OK))
