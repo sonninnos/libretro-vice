@@ -150,6 +150,7 @@ extern unsigned int retrow_crop;
 extern unsigned int retroh_crop;
 extern int retroXS_crop_offset;
 extern int retroYS_crop_offset;
+
 extern unsigned int statusbar_message_timer;
 extern unsigned int opt_statusbar;
 extern unsigned int cur_port;

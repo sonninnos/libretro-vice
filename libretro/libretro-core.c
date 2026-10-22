@@ -2199,14 +2199,14 @@ void reload_restart(void)
    if (vsync_get_warp_mode())
       vsync_set_warp_mode(0);
 
-   /* Cleanup previous autostart without resource default reset */
-   initcmdline_cleanup(false);
-
    /* Reset autostart */
    autostart_reset();
 
    /* Reset Datasette */
    datasette_control(TAPEPORT_PORT_1, DATASETTE_CONTROL_RESET);
+
+   /* Cleanup previous autostart without resource default reset */
+   initcmdline_cleanup(false);
 
    /* Model and TDE & JiffyDOS exceptions per content */
    content_exceptions();
@@ -7388,6 +7388,15 @@ static void update_variables(void)
 
 void emu_reset(int type)
 {
+   /* Reset autoloadwarp audio ignore */
+   audio_is_ignored = false;
+
+   /* Reset tick */
+   retro_now = 0;
+
+   /* Reset autosys */
+   autosys = opt_autostart;
+
    /* Changing opt_read_vicerc requires reloading */
    if (request_reload_restart)
       reload_restart();
@@ -7406,20 +7415,15 @@ void emu_reset(int type)
    keyboard_clear_keymatrix();
    joystick_clear_all();
 
-   /* Reset autoloadwarp audio ignore */
-   audio_is_ignored = false;
-
-   /* Reset tick */
-   retro_now = 0;
-
-   /* Reset autosys */
-   autosys = opt_autostart;
-
    /* Follow core option type with -1 */
    type = (type == -1) ? opt_reset_type : type;
    switch (type)
    {
       case 0:
+         /* Insert ejected disk for autostart */
+         if (dc && dc->eject_state)
+            retro_disk_set_eject_state(false);
+
          /* Hard reset before autostart */
          machine_trigger_reset(MACHINE_RESET_MODE_POWER_CYCLE);
 
@@ -7459,6 +7463,10 @@ void emu_reset(int type)
                      if (strstr(entry->name, autostartProgram))
                      {
                         autostartProgramNumber = files;
+                        /* Ignore program name and simply load the next one from
+                         * the offset, otherwise certain loaders will fail */
+                        free(autostartProgram);
+                        autostartProgram = x_strdup("");
                         break;
                      }
                   }
@@ -7487,7 +7495,7 @@ void emu_reset(int type)
             if (strstr(dc->labels[index], M3U_SAVEDISK_LABEL))
                save_disk_index = index;
 
-         /* Scan for save disk 0, insert it silently if exists and not booting from floppy */
+         /* Scan for save disk 0; insert silently if it exists and not booting from floppy */
          if (save_disk_index > -1 && dc_get_image_type(dc->files[0]) != DC_IMAGE_TYPE_FLOPPY)
          {
             int index_cur = dc->index;
@@ -7573,8 +7581,12 @@ bool retro_disk_set_eject_state(bool ejected)
                break;
             case 1:
                tape_image_attach(unit, dc->files[dc->index]);
-               retro_key_down(RETROK_SPACE);
-               retro_key_up(RETROK_SPACE);
+               /* Press Space for tape loaders that need quick reflexes at eject toggle (not on startup) */
+               if (retro_now)
+               {
+                  retro_key_down(RETROK_SPACE);
+                  retro_key_up(RETROK_SPACE);
+               }
                datasette_control(TAPEPORT_PORT_1, DATASETTE_CONTROL_START);
                break;
             default:
@@ -7737,12 +7749,12 @@ static struct retro_disk_control_ext_callback disk_interface_ext = {
 
 void retro_reset(void)
 {
-   /* Reset DC index to first entry */
-   if (dc)
+   /* Reset DC index to first entry and eject */
+   /* > Disk is inserted later in emu_reset() */
+   if (dc && dc->index != 0)
    {
       dc->index = 0;
       retro_disk_set_eject_state(true);
-      retro_disk_set_eject_state(false);
    }
 
    /* Reset auto-disable crop */
