@@ -4,7 +4,10 @@ SOURCES_C   :=
 SOURCES_CC  :=
 SOURCES_CXX :=
 OBJECTS     :=
-SILENT      := 0
+
+ifneq ($(SILENT),1)
+    E := 1
+endif
 
 ifeq ($(platform),)
 platform = unix
@@ -461,7 +464,7 @@ info:
 
 all: $(TARGET)
 
--include $(OBJECTS:.o=.d))
+-include $(OBJECTS:.o=.d)
 
 $(TARGET): $(OBJECTS)
 ifeq ($(STATIC_LINKING), 1)
@@ -475,23 +478,17 @@ endif
 
 $(OBJDIR)/%.o: %.c
 	@mkdir -p $(dir $@)
-	@if [ $(SILENT) -ne 1 ]; then\
-		$(if $@, $(shell echo echo CC $<),);\
-	fi
+	@$(if $(E), $(shell echo echo CC $<),)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
-	@if [ $(SILENT) -ne 1 ]; then\
-		$(if $@, $(shell echo echo CXX $<),);\
-	fi
+	@$(if $(E), $(shell echo echo CXX $<),)
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(OBJDIR)/%.o: %.cc
 	@mkdir -p $(dir $@)
-	@if [ $(SILENT) -ne 1 ]; then\
-		$(if $@, $(shell echo echo CXX $<),);\
-	fi
+	@$(if $(E), $(shell echo echo CXX $<),)
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 clean:
